@@ -1,0 +1,184 @@
+Build a full-stack quiz/exam practice web app using my existing TiDB
+  database.
+
+  I will provide a design reference image. Match the visual style closely.
+
+  TiDB connection information:
+  - Host: gateway01.ap-northeast-1.prod.aws.tidbcloud.com
+  - Port: 4000
+  - User: yUqg9eJ9gzsZnSm.root
+  - Password: aMg6ISx6q8zZ1EYp
+  - Database: claude_cert_exam
+  - SSL CA certificate: ISRG Root X1 certificate
+  - Use SSL for the TiDB connection.
+
+  Important:
+  Do not hardcode these credentials in source code.
+  Put them in Replit Secrets / Environment Variables:
+  - TIDB_HOST
+  - TIDB_PORT
+  - TIDB_USER
+  - TIDB_PASSWORD
+  - TIDB_DATABASE
+  - TIDB_SSL_CA or TIDB_SSL_CA_PATH
+
+  If Replit cannot store the CA file directly, store the PEM contents in
+  TIDB_SSL_CA and write it to a temporary file at server startup before
+  creating the MySQL/TiDB connection.
+
+  Existing database tables:
+
+  exam_sources:
+  - id
+  - source_key
+  - is_real_test
+  - title
+  - source_file
+  - note
+  - created_at
+
+  exam_questions:
+  - id
+  - source_id
+  - question_no
+  - scenario
+  - question_text
+  - correct_option
+  - created_at
+
+  exam_options:
+  - id
+  - question_id
+  - option_label
+  - option_text
+  - created_at
+
+  Relationships:
+  - exam_questions.source_id -> exam_sources.id
+  - exam_options.question_id -> exam_questions.id
+  - exam_sources.is_real_test = 1 means real test
+  - exam_sources.is_real_test = 0 means mockup/practice test
+
+  Current data:
+  - source_key = claude_cert_exam_60_ocr, is_real_test = 1, 60 questions
+  - source_key = claude_cert_mock_exam_html, is_real_test = 0, 239 questions
+
+  App goal:
+  Create a user-specific exam practice app. Each user should have their own
+  saved progress, attempts, scores, wrong-answer notebook, and review
+  history.
+
+  If full authentication is too heavy, implement a simple username/email
+  login system, but all saved data must be tied to user_id.
+
+  Core modes:
+
+  1. Mockup Practice Mode
+  - Use questions where exam_sources.is_real_test = 0.
+  - Allow repeated practice.
+  - Include a configurable time limit.
+  - Users can check correctness during the attempt.
+  - Show immediate feedback after answering.
+  - Store attempt history.
+  - Store per-question answers.
+  - Store wrong answers in an 오답노트 / wrong-answer notebook.
+  - Users can review and retry wrong answers later.
+
+  2. Real Test Mode
+  - Use questions where exam_sources.is_real_test = 1.
+  - Strict 2-hour time limit.
+  - Full score is 1000 points.
+  - Passing score is 720 points.
+  - Do not reveal correctness question-by-question during the real test.
+  - Only show final result after submission or timer expiration.
+  - Final result must include:
+    - total score out of 1000
+    - pass/fail
+    - correct count / total count
+    - scenario/category-level score breakdown
+    - wrong answer list
+  - Store real test attempts separately from mockup attempts.
+  - Store real test wrong answers into the wrong-answer notebook.
+
+  Scoring:
+  - Real test score = correct_count / total_questions * 1000.
+  - Passing score = 720.
+  - Category/scenario score should group by exam_questions.scenario.
+  - Mockup score can show percent correct and correct/total.
+
+  Required pages:
+  - Login or user selection page
+  - Dashboard
+    - recent attempts
+    - real test pass/fail history
+    - mockup stats
+    - wrong-answer count
+  - Mode selection page
+    - Real Test
+    - Mockup Practice
+    - Wrong Answer Review
+  - Exam taking page
+    - timer
+    - question navigation
+    - selected answer state
+    - flag/bookmark question
+    - submit button
+    - responsive layout
+  - Result page
+    - score summary
+    - pass/fail for real test
+    - scenario/category breakdown
+    - wrong answers
+  - Wrong-answer notebook page
+    - saved wrong answers
+    - filter by real/mock
+    - filter by scenario/category
+    - retry wrong questions
+    - mark as resolved
+
+  Add new app tables as needed, for example:
+  - users
+  - exam_attempts
+  - user_answers
+  - wrong_answer_notes
+  - question_bookmarks
+
+  Suggested schema:
+  - users: id, email or username, created_at
+  - exam_attempts: id, user_id, source_id, is_real_test, started_at,
+  submitted_at, time_limit_seconds, score_raw, score_scaled, passed
+  - user_answers: id, attempt_id, question_id, selected_option, is_correct,
+  answered_at
+  - wrong_answer_notes: id, user_id, question_id, source_attempt_id,
+  selected_option, correct_option, note, resolved_at, created_at
+  - question_bookmarks: id, user_id, question_id, created_at
+
+  Implementation details:
+  - Use existing TiDB tables for question data.
+  - Do not duplicate question and option text unless needed for historical
+  snapshots.
+  - Use joins to determine real/mock:
+    exam_questions.source_id -> exam_sources.id
+    exam_sources.is_real_test
+  - Keep real and mockup attempts clearly separated.
+  - Every user-specific record must include user_id.
+  - Use server-side scoring. Do not trust client-side correctness.
+  - Timer must auto-submit when expired.
+  - Persist active attempts so refresh does not lose progress.
+  - App must be mobile responsive.
+  - Follow the provided design reference image closely.
+
+  Recommended stack:
+  - Next.js or React
+  - Node/Express or Next.js API routes
+  - mysql2 for TiDB/MySQL connection
+  - Replit Secrets for environment variables
+
+  Deliverables:
+  - Working app
+  - Migration/init script for new app tables only
+  - Do not reseed existing question data
+  - README with setup instructions
+  - .env.example
+  - Basic loading/error states
+  - Basic tests for scoring logic and attempt submission logic
