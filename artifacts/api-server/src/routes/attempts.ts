@@ -18,7 +18,11 @@ import {
 } from "@workspace/api-zod";
 import { getPool } from "../lib/db";
 import { requireAuth, type AuthedRequest } from "../lib/auth";
-import { getQuestionsByIds, getPracticeSourceId } from "../lib/examData";
+import {
+  getQuestionsByIds,
+  getPracticeSourceId,
+  displaySourceTitle,
+} from "../lib/examData";
 import {
   loadAttempt,
   loadSavedAnswers,
@@ -101,11 +105,7 @@ async function buildAttemptDetail(attempt: AttemptRow) {
     })
     .filter((q): q is NonNullable<typeof q> => Boolean(q));
 
-  const [srcRows] = await getPool().query<RowDataPacket[]>(
-    "SELECT title FROM exam_sources WHERE id = ?",
-    [attempt.source_id],
-  );
-  const title = (srcRows[0]?.title as string) ?? "Exam";
+  const title = displaySourceTitle(isReal);
 
   const totalQuestions = questions.length;
   const currentPosition = Math.min(
@@ -149,14 +149,6 @@ function buildResult(attempt: AttemptRow, scored: ScoredResult, title: string) {
   };
 }
 
-async function sourceTitle(sourceId: number): Promise<string> {
-  const [rows] = await getPool().query<RowDataPacket[]>(
-    "SELECT title FROM exam_sources WHERE id = ?",
-    [sourceId],
-  );
-  return (rows[0]?.title as string) ?? "Exam";
-}
-
 router.get("/attempts", requireAuth, async (req, res) => {
   const userId = (req as AuthedRequest).userId;
   const pool = getPool();
@@ -177,7 +169,7 @@ router.get("/attempts", requireAuth, async (req, res) => {
       id: r.id as number,
       sourceId: r.source_id as number,
       isRealTest: Boolean(r.is_real_test),
-      title: r.title as string,
+      title: displaySourceTitle(Boolean(r.is_real_test)),
       startedAt: new Date(r.started_at).toISOString(),
       submittedAt: r.submitted_at
         ? new Date(r.submitted_at).toISOString()
@@ -471,7 +463,7 @@ router.post("/attempts/:id/submit", requireAuth, async (req, res) => {
     await persistScore(attempt, scored);
   }
   const refreshed = await loadAttempt(attempt.id, userId);
-  const title = await sourceTitle(attempt.source_id);
+  const title = displaySourceTitle(Boolean(attempt.is_real_test));
   res.json(SubmitAttemptResponse.parse(buildResult(refreshed!, scored, title)));
 });
 
@@ -496,7 +488,7 @@ router.get("/attempts/:id/result", requireAuth, async (req, res) => {
   }
   const scored = await computeScore(attempt);
   const refreshed = await loadAttempt(attempt.id, userId);
-  const title = await sourceTitle(attempt.source_id);
+  const title = displaySourceTitle(Boolean(attempt.is_real_test));
   res.json(
     GetAttemptResultResponse.parse(buildResult(refreshed!, scored, title)),
   );

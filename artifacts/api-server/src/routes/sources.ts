@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import type { RowDataPacket } from "mysql2";
 import { ListSourcesResponse } from "@workspace/api-zod";
 import { getPool } from "../lib/db";
+import { displaySourceTitle } from "../lib/examData";
 
 const router: IRouter = Router();
 
@@ -19,7 +20,7 @@ router.get("/sources", async (_req, res) => {
     id: r.id as number,
     sourceKey: r.source_key as string,
     isRealTest: Boolean(r.is_real_test),
-    title: r.title as string,
+    title: displaySourceTitle(Boolean(r.is_real_test)),
     questionCount: Number(r.question_count),
   }));
   res.json(ListSourcesResponse.parse(data));

@@ -4,6 +4,14 @@ import { getPool } from "./db";
 // The single source used by Practice Mode. Practice never shows a source picker.
 export const PRACTICE_SOURCE_KEY = "claude_cert_mock_exam_html";
 
+// User-facing source names. The raw DB titles carry internal prep wording
+// ("OCR" / "HTML") that must never be shown in the UI. There are exactly two
+// sources: the real certification exam (is_real_test) and the mock-up question
+// bank. Always render titles through this helper, never the raw exam_sources.title.
+export function displaySourceTitle(isRealTest: boolean): string {
+  return isRealTest ? "CCAF Real Exam" : "CCAF Mock-up Questions";
+}
+
 // Resolve the practice source id by its stable key. Returns null if missing.
 export async function getPracticeSourceId(): Promise<number | null> {
   const pool = getPool();

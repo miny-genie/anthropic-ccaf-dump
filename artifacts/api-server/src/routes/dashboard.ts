@@ -3,7 +3,7 @@ import type { RowDataPacket } from "mysql2";
 import { GetDashboardResponse } from "@workspace/api-zod";
 import { getPool } from "../lib/db";
 import { requireAuth, type AuthedRequest } from "../lib/auth";
-import { getPracticeSourceId } from "../lib/examData";
+import { getPracticeSourceId, displaySourceTitle } from "../lib/examData";
 import { findActivePracticeAttempt } from "../lib/attempts";
 
 const router: IRouter = Router();
@@ -22,7 +22,7 @@ function attemptSummary(r: RowDataPacket) {
     id: r.id as number,
     sourceId: r.source_id as number,
     isRealTest: Boolean(r.is_real_test),
-    title: r.title as string,
+    title: displaySourceTitle(Boolean(r.is_real_test)),
     startedAt: new Date(r.started_at).toISOString(),
     submittedAt,
     scoreScaled: r.score_scaled == null ? null : Number(r.score_scaled),
