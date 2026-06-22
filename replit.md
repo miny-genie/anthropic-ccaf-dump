@@ -31,17 +31,21 @@ A study app for the Claude Certified Architect exam: timed real-test simulation,
 
 ## Architecture decisions
 
-- **Two table families in one TiDB database.** Existing read-only question bank (`exam_sources`, `exam_questions`, `exam_options`) is never written to. New app tables are prefixed `app_` (`app_users`, `app_attempts`, `app_attempt_questions`, `app_wrong_answers`, `app_bookmarks`) and auto-created on server boot.
-- **Server-side scoring only.** Scaled score = round(correct/total × 1000), pass ≥ 720. Real-test mode hides correctness until submit; mock mode returns per-answer feedback.
-- **Timer is server-authoritative.** `remainingSeconds` is derived from `started_at + time_limit_seconds`; expired attempts auto-submit, and answers/results are gated by expiry & submission state.
+- **Two table families in one TiDB database.** Existing read-only question bank (`exam_sources`, `exam_questions`, `exam_options`) is never written to. New app tables are prefixed `app_` (`app_users`, `app_attempts`, `app_attempt_questions`, `app_wrong_answers`, `app_bookmarks`, `app_notes`) and auto-created on server boot. `initDb.ts` runs idempotent migrations (`columnExists`/`indexExists`) for added columns (`app_attempt_questions.option_order`, `app_attempts.current_position`) and the `app_notes` table.
+- **Randomized, persisted order in both modes.** On attempt start, question order is shuffled and each question's option labels are shuffled and stored in `app_attempt_questions.option_order`. Detail responses reorder options by that stored order, so a refresh always shows the same layout. Scoring and answer validation compare option **labels**, never positions.
+- **Per-question notes live in `app_notes`** (one row per `user_id`+`question_id`, shared across attempts), separate from `app_wrong_answers` (which only tracks `resolved` state, keyed by `user_id`+`question_id`+`is_real_test`). Bookmarks live in `app_bookmarks`.
+- **Server-side scoring only.** Scaled score = round(correct/total × 1000), pass ≥ 720. Real-test mode hides correctness until submit; practice mode returns + persists per-answer feedback (`isCorrect`/`correctOption` appear in question detail only when not a real test and the question is answered).
+- **Timer is server-authoritative; practice is untimed.** For real tests `remainingSeconds` is derived from `started_at + time_limit_seconds` (7200s) and expired attempts auto-submit. Practice attempts store `time_limit_seconds = 0`; `remainingSeconds` is `null`, `isExpired` is always false, and there is no auto-submit.
+- **Resumable position.** `app_attempts.current_position` (1-based) is persisted via `PATCH /attempts/:id/progress` and returned as `currentPosition` so the frontend reopens the attempt on the last viewed question.
 - **Simple username auth** — no password. Signed httpOnly cookie holds the user id; every query is scoped by `user_id`.
 
 ## Product
 
 - Username login (no password); all progress is tied to the user.
-- Real Test mode: strict 2-hour timer, no per-question feedback, scaled score out of 1000 with pass/fail and scenario breakdown.
-- Mockup Practice mode: repeatable, optional timer, immediate correct/wrong feedback.
-- Wrong-answer notebook: auto-populated on submit, filter by real/mock and scenario, add notes, mark resolved, and re-review unresolved questions.
+- Real Test mode: strict 2-hour timer, no per-question feedback; the scenario shows as a subtle right-aligned "Scenario : {…}" line under the question (no large heading). Scaled score out of 1000 with pass/fail and scenario breakdown.
+- Practice mode: untimed and repeatable; each answer immediately reveals correct/wrong and the correct option, and that feedback persists across refresh/logout. Every question supports a bookmark toggle and a personal note.
+- Both modes randomize question order and option order per attempt; the order is stored so a refresh preserves it. Current position is saved so an attempt resumes where it was left off.
+- Wrong-answer notebook: auto-populated (practice misses on answer, real-test misses on submit), filter by real/mock and scenario, edit per-question notes, mark resolved, and re-review unresolved questions.
 - Bookmarks, attempt history, and a dashboard summarizing stats.
 
 ## User preferences

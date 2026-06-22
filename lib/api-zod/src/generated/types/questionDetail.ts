@@ -17,4 +17,11 @@ export interface QuestionDetail {
   /** @nullable */
   selectedOption?: string | null;
   flagged: boolean;
+  bookmarked: boolean;
+  /** @nullable */
+  note?: string | null;
+  /** @nullable */
+  isCorrect?: boolean | null;
+  /** @nullable */
+  correctOption?: string | null;
 }

@@ -7,11 +7,14 @@ import {
   SaveAnswerBody,
   SubmitAttemptParams,
   GetAttemptResultParams,
+  UpdateAttemptProgressParams,
+  UpdateAttemptProgressBody,
   ListAttemptsResponse,
   GetAttemptResponse,
   SaveAnswerResponse,
   SubmitAttemptResponse,
   GetAttemptResultResponse,
+  UpdateAttemptProgressResponse,
 } from "@workspace/api-zod";
 import { getPool } from "../lib/db";
 import { requireAuth, type AuthedRequest } from "../lib/auth";
@@ -24,33 +27,75 @@ import {
   isExpired,
   computeScore,
   persistScore,
+  shuffle,
+  reorderOptions,
   REAL_TEST_TIME_LIMIT,
-  MOCKUP_DEFAULT_TIME_LIMIT,
   type AttemptRow,
   type ScoredResult,
 } from "../lib/attempts";
 
 const router: IRouter = Router();
 
+async function loadUserQuestionMeta(
+  userId: number,
+  questionIds: number[],
+): Promise<{ bookmarked: Set<number>; notes: Map<number, string> }> {
+  const bookmarked = new Set<number>();
+  const notes = new Map<number, string>();
+  if (questionIds.length === 0) return { bookmarked, notes };
+  const pool = getPool();
+  const placeholders = questionIds.map(() => "?").join(",");
+
+  const [bmRows] = await pool.query<RowDataPacket[]>(
+    `SELECT question_id FROM app_bookmarks
+      WHERE user_id = ? AND question_id IN (${placeholders})`,
+    [userId, ...questionIds],
+  );
+  for (const r of bmRows) bookmarked.add(r.question_id as number);
+
+  const [noteRows] = await pool.query<RowDataPacket[]>(
+    `SELECT question_id, note FROM app_notes
+      WHERE user_id = ? AND question_id IN (${placeholders})`,
+    [userId, ...questionIds],
+  );
+  for (const r of noteRows) {
+    const note = (r.note as string | null) ?? null;
+    if (note != null && note !== "") notes.set(r.question_id as number, note);
+  }
+  return { bookmarked, notes };
+}
+
 async function buildAttemptDetail(attempt: AttemptRow) {
   const order = await getAttemptQuestionOrder(attempt.id);
   const answers = await loadSavedAnswers(attempt.id);
   const questionMap = await getQuestionsByIds(order);
   const isReal = Boolean(attempt.is_real_test);
+  const { bookmarked, notes } = await loadUserQuestionMeta(
+    attempt.user_id,
+    order,
+  );
 
   const questions = order
     .map((id, idx) => {
       const q = questionMap.get(id);
       if (!q) return null;
       const saved = answers.get(id);
+      const selected = saved?.selected_option ?? null;
+      // Practice reveals correctness once a question is answered; real tests
+      // never expose the correct option before submission.
+      const revealed = !isReal && selected != null;
       return {
         id: q.id,
         questionNo: idx + 1,
         scenario: q.scenario,
         questionText: q.questionText,
-        options: q.options,
-        selectedOption: saved?.selected_option ?? null,
+        options: reorderOptions(saved?.option_order, q.options),
+        selectedOption: selected,
         flagged: Boolean(saved?.flagged),
+        bookmarked: bookmarked.has(q.id),
+        note: notes.get(q.id) ?? null,
+        isCorrect: revealed ? selected === q.correctOption : null,
+        correctOption: revealed ? q.correctOption : null,
       };
     })
     .filter((q): q is NonNullable<typeof q> => Boolean(q));
@@ -60,6 +105,12 @@ async function buildAttemptDetail(attempt: AttemptRow) {
     [attempt.source_id],
   );
   const title = (srcRows[0]?.title as string) ?? "Exam";
+
+  const totalQuestions = questions.length;
+  const currentPosition = Math.min(
+    Math.max(1, attempt.current_position || 1),
+    Math.max(1, totalQuestions),
+  );
 
   return {
     id: attempt.id,
@@ -72,6 +123,7 @@ async function buildAttemptDetail(attempt: AttemptRow) {
       : null,
     timeLimitSeconds: attempt.time_limit_seconds,
     remainingSeconds: remainingSeconds(attempt),
+    currentPosition,
     questions,
   };
 }
@@ -162,29 +214,32 @@ router.post("/attempts", requireAuth, async (req, res) => {
   }
   const isReal = Boolean(srcRows[0].is_real_test);
 
-  const questions = await getQuestionsForSource(sourceId);
-  if (questions.length === 0) {
+  const sourceQuestions = await getQuestionsForSource(sourceId);
+  if (sourceQuestions.length === 0) {
     res.status(400).json({ error: "Source has no questions" });
     return;
   }
 
-  const timeLimit = isReal
-    ? REAL_TEST_TIME_LIMIT
-    : parsed.data.timeLimitSeconds && parsed.data.timeLimitSeconds > 0
-      ? parsed.data.timeLimitSeconds
-      : MOCKUP_DEFAULT_TIME_LIMIT;
+  // Real tests are strictly timed; practice mode is untimed (sentinel 0).
+  const timeLimit = isReal ? REAL_TEST_TIME_LIMIT : 0;
 
   const [result] = await pool.query<ResultSetHeader>(
     `INSERT INTO app_attempts
        (user_id, source_id, is_real_test, time_limit_seconds, total_count)
      VALUES (?, ?, ?, ?, ?)`,
-    [userId, sourceId, isReal ? 1 : 0, timeLimit, questions.length],
+    [userId, sourceId, isReal ? 1 : 0, timeLimit, sourceQuestions.length],
   );
   const attemptId = result.insertId;
 
-  const values = questions.map((q, idx) => [attemptId, q.id, idx + 1]);
+  // Randomize question order per attempt, and option order per question.
+  const ordered = shuffle(sourceQuestions);
+  const values = ordered.map((q, idx) => {
+    const optionOrder = shuffle(q.options.map((o) => o.label)).join(",");
+    return [attemptId, q.id, idx + 1, optionOrder];
+  });
   await pool.query(
-    `INSERT INTO app_attempt_questions (attempt_id, question_id, position) VALUES ?`,
+    `INSERT INTO app_attempt_questions (attempt_id, question_id, position, option_order)
+     VALUES ?`,
     [values],
   );
 
@@ -240,6 +295,17 @@ router.post("/attempts/:id/answer", requireAuth, async (req, res) => {
   const { questionId, selectedOption, flagged } = body.data;
   const pool = getPool();
 
+  const questionMap = await getQuestionsByIds([questionId]);
+  const q = questionMap.get(questionId);
+
+  // Validate the chosen option is a real label for this question.
+  if (selectedOption != null) {
+    if (!q || !q.options.some((o) => o.label === selectedOption)) {
+      res.status(400).json({ error: "Invalid option for this question" });
+      return;
+    }
+  }
+
   const sets: string[] = [];
   const args: unknown[] = [];
   if (selectedOption !== undefined) {
@@ -272,9 +338,23 @@ router.post("/attempts/:id/answer", requireAuth, async (req, res) => {
     return;
   }
 
-  const questionMap = await getQuestionsByIds([questionId]);
-  const q = questionMap.get(questionId);
   const isCorrect = q ? selectedOption === q.correctOption : null;
+
+  // Practice may never be formally submitted, so record misses into the
+  // wrong-answer notebook immediately as the user studies.
+  if (q && isCorrect === false) {
+    await pool.query<ResultSetHeader>(
+      `INSERT INTO app_wrong_answers
+         (user_id, question_id, is_real_test, selected_option, correct_option, resolved_at)
+       VALUES (?, ?, 0, ?, ?, NULL)
+       ON DUPLICATE KEY UPDATE
+         selected_option = VALUES(selected_option),
+         correct_option = VALUES(correct_option),
+         resolved_at = NULL`,
+      [userId, questionId, selectedOption, q.correctOption],
+    );
+  }
+
   res.json(
     SaveAnswerResponse.parse({
       saved: true,
@@ -282,6 +362,31 @@ router.post("/attempts/:id/answer", requireAuth, async (req, res) => {
       correctOption: q ? q.correctOption : null,
     }),
   );
+});
+
+router.patch("/attempts/:id/progress", requireAuth, async (req, res) => {
+  const userId = (req as AuthedRequest).userId;
+  const params = UpdateAttemptProgressParams.safeParse(req.params);
+  const body = UpdateAttemptProgressBody.safeParse(req.body);
+  if (!params.success || !body.success) {
+    res.status(400).json({ error: "Invalid request" });
+    return;
+  }
+  const attempt = await loadAttempt(params.data.id, userId);
+  if (!attempt) {
+    res.status(404).json({ error: "Attempt not found" });
+    return;
+  }
+  const clamped = Math.min(
+    Math.max(1, body.data.currentPosition),
+    Math.max(1, attempt.total_count),
+  );
+  const pool = getPool();
+  await pool.query<ResultSetHeader>(
+    "UPDATE app_attempts SET current_position = ? WHERE id = ? AND user_id = ?",
+    [clamped, attempt.id, userId],
+  );
+  res.json(UpdateAttemptProgressResponse.parse({ ok: true }));
 });
 
 router.post("/attempts/:id/submit", requireAuth, async (req, res) => {

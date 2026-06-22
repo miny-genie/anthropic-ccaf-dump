@@ -22,6 +22,8 @@ tags:
     description: Question bookmarks
   - name: wrongAnswers
     description: Wrong-answer notebook
+  - name: notes
+    description: Per-question personal notes
 paths:
   /healthz:
     get:
@@ -230,6 +232,56 @@ paths:
         "401":
           $ref: "#/components/responses/Error"
         "404":
+          $ref: "#/components/responses/Error"
+
+  /attempts/{id}/progress:
+    patch:
+      operationId: updateAttemptProgress
+      tags: [attempts]
+      summary: Persist the current question position for resuming
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProgressInput"
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ok"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /notes:
+    put:
+      operationId: setNote
+      tags: [notes]
+      summary: Create, update, or clear a personal note for a question
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoteInput"
+      responses:
+        "200":
+          description: Saved note
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoteResult"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
           $ref: "#/components/responses/Error"
 
   /bookmarks:
@@ -447,7 +499,7 @@ components:
           type: string
     QuestionDetail:
       type: object
-      required: [id, questionNo, questionText, options, flagged]
+      required: [id, questionNo, questionText, options, flagged, bookmarked]
       properties:
         id:
           type: integer
@@ -465,6 +517,14 @@ components:
           type: ["string", "null"]
         flagged:
           type: boolean
+        bookmarked:
+          type: boolean
+        note:
+          type: ["string", "null"]
+        isCorrect:
+          type: ["boolean", "null"]
+        correctOption:
+          type: ["string", "null"]
     StartAttemptInput:
       type: object
       required: [sourceId]
@@ -484,6 +544,7 @@ components:
           startedAt,
           timeLimitSeconds,
           remainingSeconds,
+          currentPosition,
           questions,
         ]
       properties:
@@ -502,6 +563,8 @@ components:
         timeLimitSeconds:
           type: integer
         remainingSeconds:
+          type: ["integer", "null"]
+        currentPosition:
           type: integer
         questions:
           type: array
@@ -775,5 +838,27 @@ components:
           type: string
         previousSelected:
           type: ["string", "null"]
+        note:
+          type: ["string", "null"]
+    ProgressInput:
+      type: object
+      required: [currentPosition]
+      properties:
+        currentPosition:
+          type: integer
+    NoteInput:
+      type: object
+      required: [questionId]
+      properties:
+        questionId:
+          type: integer
+        note:
+          type: ["string", "null"]
+    NoteResult:
+      type: object
+      required: [questionId]
+      properties:
+        questionId:
+          type: integer
         note:
           type: ["string", "null"]

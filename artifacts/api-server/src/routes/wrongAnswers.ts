@@ -13,6 +13,7 @@ import {
 import { getPool } from "../lib/db";
 import { requireAuth, type AuthedRequest } from "../lib/auth";
 import { getQuestionsByIds } from "../lib/examData";
+import { setNote } from "../lib/notes";
 
 const router: IRouter = Router();
 
@@ -74,9 +75,11 @@ router.get("/wrong-answers", requireAuth, async (req, res) => {
 
   const [rows] = await pool.query<WaRow[]>(
     `SELECT wa.id, wa.question_id, wa.is_real_test, wa.selected_option,
-            wa.correct_option, wa.note, wa.resolved_at, wa.created_at
+            wa.correct_option, n.note AS note, wa.resolved_at, wa.created_at
        FROM app_wrong_answers wa
        JOIN exam_questions q ON q.id = wa.question_id
+       LEFT JOIN app_notes n
+         ON n.user_id = wa.user_id AND n.question_id = wa.question_id
       WHERE ${where.join(" AND ")}
       ORDER BY wa.created_at DESC`,
     args,
@@ -123,9 +126,11 @@ router.get("/wrong-answers/review", requireAuth, async (req, res) => {
 
   const [rows] = await pool.query<WaRow[]>(
     `SELECT wa.id, wa.question_id, wa.is_real_test, wa.selected_option,
-            wa.correct_option, wa.note
+            wa.correct_option, n.note AS note
        FROM app_wrong_answers wa
        JOIN exam_questions q ON q.id = wa.question_id
+       LEFT JOIN app_notes n
+         ON n.user_id = wa.user_id AND n.question_id = wa.question_id
       WHERE ${where.join(" AND ")}
       ORDER BY wa.created_at DESC`,
     args,
@@ -160,33 +165,33 @@ router.patch("/wrong-answers/:id", requireAuth, async (req, res) => {
   }
   const pool = getPool();
 
-  const sets: string[] = [];
-  const args: unknown[] = [];
-  if (body.data.note !== undefined) {
-    sets.push("note = ?");
-    args.push(body.data.note ?? null);
+  const [ownRows] = await pool.query<WaRow[]>(
+    "SELECT id, question_id FROM app_wrong_answers WHERE id = ? AND user_id = ?",
+    [params.data.id, userId],
+  );
+  if (ownRows.length === 0) {
+    res.status(404).json({ error: "Wrong answer not found" });
+    return;
   }
-  if (body.data.resolved !== undefined && body.data.resolved !== null) {
-    sets.push("resolved_at = ?");
-    args.push(body.data.resolved ? new Date() : null);
-  }
+  const questionId = ownRows[0].question_id;
 
-  if (sets.length > 0) {
-    args.push(params.data.id, userId);
-    const [upd] = await pool.query<ResultSetHeader>(
-      `UPDATE app_wrong_answers SET ${sets.join(", ")} WHERE id = ? AND user_id = ?`,
-      args,
+  if (body.data.resolved !== undefined && body.data.resolved !== null) {
+    await pool.query<ResultSetHeader>(
+      "UPDATE app_wrong_answers SET resolved_at = ? WHERE id = ? AND user_id = ?",
+      [body.data.resolved ? new Date() : null, params.data.id, userId],
     );
-    if (upd.affectedRows === 0) {
-      res.status(404).json({ error: "Wrong answer not found" });
-      return;
-    }
+  }
+  if (body.data.note !== undefined) {
+    await setNote(userId, questionId, body.data.note ?? null);
   }
 
   const [rows] = await pool.query<WaRow[]>(
-    `SELECT id, question_id, is_real_test, selected_option, correct_option,
-            note, resolved_at, created_at
-       FROM app_wrong_answers WHERE id = ? AND user_id = ?`,
+    `SELECT wa.id, wa.question_id, wa.is_real_test, wa.selected_option,
+            wa.correct_option, n.note AS note, wa.resolved_at, wa.created_at
+       FROM app_wrong_answers wa
+       LEFT JOIN app_notes n
+         ON n.user_id = wa.user_id AND n.question_id = wa.question_id
+      WHERE wa.id = ? AND wa.user_id = ?`,
     [params.data.id, userId],
   );
   if (rows.length === 0) {

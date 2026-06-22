@@ -54,6 +54,13 @@ export interface QuestionDetail {
   /** @nullable */
   selectedOption?: string | null;
   flagged: boolean;
+  bookmarked: boolean;
+  /** @nullable */
+  note?: string | null;
+  /** @nullable */
+  isCorrect?: boolean | null;
+  /** @nullable */
+  correctOption?: string | null;
 }
 
 export interface StartAttemptInput {
@@ -71,7 +78,9 @@ export interface AttemptDetail {
   /** @nullable */
   submittedAt?: string | null;
   timeLimitSeconds: number;
-  remainingSeconds: number;
+  /** @nullable */
+  remainingSeconds: number | null;
+  currentPosition: number;
   questions: QuestionDetail[];
 }
 
@@ -221,6 +230,22 @@ export interface ReviewQuestion {
   correctOption: string;
   /** @nullable */
   previousSelected?: string | null;
+  /** @nullable */
+  note?: string | null;
+}
+
+export interface ProgressInput {
+  currentPosition: number;
+}
+
+export interface NoteInput {
+  questionId: number;
+  /** @nullable */
+  note?: string | null;
+}
+
+export interface NoteResult {
+  questionId: number;
   /** @nullable */
   note?: string | null;
 }

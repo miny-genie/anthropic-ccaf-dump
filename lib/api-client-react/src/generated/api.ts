@@ -34,7 +34,10 @@ import type {
   HealthStatus,
   ListWrongAnswersParams,
   LoginInput,
+  NoteInput,
+  NoteResult,
   Ok,
+  ProgressInput,
   ReviewQuestion,
   Source,
   StartAttemptInput,
@@ -948,6 +951,149 @@ export function useGetAttemptResult<TData = Awaited<ReturnType<typeof getAttempt
 
 
 
+
+export const getUpdateAttemptProgressUrl = (id: number,) => {
+
+
+
+
+  return `/api/attempts/${id}/progress`
+}
+
+/**
+ * @summary Persist the current question position for resuming
+ */
+export const updateAttemptProgress = async (id: number,
+    progressInput: ProgressInput, options?: RequestInit): Promise<Ok> => {
+
+  return customFetch<Ok>(getUpdateAttemptProgressUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      progressInput,)
+  }
+);}
+
+
+
+
+export const getUpdateAttemptProgressMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAttemptProgress>>, TError,{id: number;data: BodyType<ProgressInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAttemptProgress>>, TError,{id: number;data: BodyType<ProgressInput>}, TContext> => {
+
+const mutationKey = ['updateAttemptProgress'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAttemptProgress>>, {id: number;data: BodyType<ProgressInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateAttemptProgress(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAttemptProgressMutationResult = NonNullable<Awaited<ReturnType<typeof updateAttemptProgress>>>
+    export type UpdateAttemptProgressMutationBody = BodyType<ProgressInput>
+    export type UpdateAttemptProgressMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Persist the current question position for resuming
+ */
+export const useUpdateAttemptProgress = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAttemptProgress>>, TError,{id: number;data: BodyType<ProgressInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAttemptProgress>>,
+        TError,
+        {id: number;data: BodyType<ProgressInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateAttemptProgressMutationOptions(options));
+    }
+
+export const getSetNoteUrl = () => {
+
+
+
+
+  return `/api/notes`
+}
+
+/**
+ * @summary Create, update, or clear a personal note for a question
+ */
+export const setNote = async (noteInput: NoteInput, options?: RequestInit): Promise<NoteResult> => {
+
+  return customFetch<NoteResult>(getSetNoteUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      noteInput,)
+  }
+);}
+
+
+
+
+export const getSetNoteMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setNote>>, TError,{data: BodyType<NoteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setNote>>, TError,{data: BodyType<NoteInput>}, TContext> => {
+
+const mutationKey = ['setNote'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setNote>>, {data: BodyType<NoteInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  setNote(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetNoteMutationResult = NonNullable<Awaited<ReturnType<typeof setNote>>>
+    export type SetNoteMutationBody = BodyType<NoteInput>
+    export type SetNoteMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Create, update, or clear a personal note for a question
+ */
+export const useSetNote = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setNote>>, TError,{data: BodyType<NoteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setNote>>,
+        TError,
+        {data: BodyType<NoteInput>},
+        TContext
+      > => {
+      return useMutation(getSetNoteMutationOptions(options));
+    }
 
 export const getListBookmarksUrl = () => {
 

@@ -146,7 +146,8 @@ export const GetAttemptResponse = zod.object({
   "startedAt": zod.string(),
   "submittedAt": zod.string().nullish(),
   "timeLimitSeconds": zod.number(),
-  "remainingSeconds": zod.number(),
+  "remainingSeconds": zod.number().nullable(),
+  "currentPosition": zod.number(),
   "questions": zod.array(zod.object({
   "id": zod.number(),
   "questionNo": zod.number(),
@@ -157,7 +158,11 @@ export const GetAttemptResponse = zod.object({
   "text": zod.string()
 })),
   "selectedOption": zod.string().nullish(),
-  "flagged": zod.boolean()
+  "flagged": zod.boolean(),
+  "bookmarked": zod.boolean(),
+  "note": zod.string().nullish(),
+  "isCorrect": zod.boolean().nullish(),
+  "correctOption": zod.string().nullish()
 }))
 })
 
@@ -255,6 +260,36 @@ export const GetAttemptResultResponse = zod.object({
   "selectedOption": zod.string().nullish(),
   "correctOption": zod.string()
 }))
+})
+
+
+/**
+ * @summary Persist the current question position for resuming
+ */
+export const UpdateAttemptProgressParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateAttemptProgressBody = zod.object({
+  "currentPosition": zod.number()
+})
+
+export const UpdateAttemptProgressResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Create, update, or clear a personal note for a question
+ */
+export const SetNoteBody = zod.object({
+  "questionId": zod.number(),
+  "note": zod.string().nullish()
+})
+
+export const SetNoteResponse = zod.object({
+  "questionId": zod.number(),
+  "note": zod.string().nullish()
 })
 
 

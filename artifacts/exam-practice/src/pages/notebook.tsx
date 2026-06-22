@@ -1,11 +1,67 @@
-import { useListWrongAnswers, useListWrongAnswerScenarios, useUpdateWrongAnswer, getListWrongAnswersQueryKey } from "@workspace/api-client-react";
+import { useListWrongAnswers, useListWrongAnswerScenarios, useUpdateWrongAnswer, useSetNote, getListWrongAnswersQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { FileText, CheckCircle, XCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQueryClient } from "@tanstack/react-query";
+
+function NoteEditor({ questionId, initialNote }: { questionId: number; initialNote: string | null }) {
+  const queryClient = useQueryClient();
+  const noteMutation = useSetNote();
+  const [draft, setDraft] = useState(initialNote ?? "");
+
+  useEffect(() => {
+    setDraft(initialNote ?? "");
+  }, [initialNote]);
+
+  const dirty = draft !== (initialNote ?? "");
+
+  const save = (value: string) => {
+    noteMutation.mutate(
+      { data: { questionId, note: value } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListWrongAnswersQueryKey() });
+        },
+      },
+    );
+  };
+
+  return (
+    <div className="border-t border-border pt-4">
+      <label className="text-sm font-semibold text-muted-foreground">Your note</label>
+      <Textarea
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        placeholder="Add a personal note for this question..."
+        className="mt-2 min-h-20 bg-secondary/30"
+      />
+      <div className="mt-2 flex justify-end gap-2">
+        {initialNote && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { setDraft(""); save(""); }}
+            disabled={noteMutation.isPending}
+          >
+            Remove
+          </Button>
+        )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => save(draft)}
+          disabled={noteMutation.isPending || !dirty}
+        >
+          Save note
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export default function Notebook() {
   const [scenarioFilter, setScenarioFilter] = useState<string>("all");
@@ -147,6 +203,8 @@ export default function Notebook() {
                     );
                   })}
                 </div>
+
+                <NoteEditor questionId={wa.questionId} initialNote={wa.note ?? null} />
               </CardContent>
             </Card>
           ))

@@ -13,6 +13,7 @@ export interface AttemptRow {
   source_id: number;
   is_real_test: number;
   time_limit_seconds: number;
+  current_position: number;
   started_at: Date;
   submitted_at: Date | null;
   score_raw: number | null;
@@ -28,8 +29,9 @@ export async function loadAttempt(
 ): Promise<AttemptRow | null> {
   const pool = getPool();
   const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT id, user_id, source_id, is_real_test, time_limit_seconds, started_at,
-            submitted_at, score_raw, score_scaled, passed, correct_count, total_count
+    `SELECT id, user_id, source_id, is_real_test, time_limit_seconds, current_position,
+            started_at, submitted_at, score_raw, score_scaled, passed, correct_count,
+            total_count
        FROM app_attempts WHERE id = ? AND user_id = ?`,
     [attemptId, userId],
   );
@@ -37,7 +39,10 @@ export async function loadAttempt(
   return rows[0] as unknown as AttemptRow;
 }
 
-export function remainingSeconds(a: AttemptRow): number {
+// Practice attempts are untimed; only real tests have a server-authoritative
+// countdown. Returns null when there is no time limit.
+export function remainingSeconds(a: AttemptRow): number | null {
+  if (!a.is_real_test || a.time_limit_seconds <= 0) return null;
   if (a.submitted_at) return 0;
   const elapsed = Math.floor(
     (Date.now() - new Date(a.started_at).getTime()) / 1000,
@@ -46,13 +51,48 @@ export function remainingSeconds(a: AttemptRow): number {
 }
 
 export function isExpired(a: AttemptRow): boolean {
-  return !a.submitted_at && remainingSeconds(a) <= 0;
+  const rem = remainingSeconds(a);
+  return rem !== null && !a.submitted_at && rem <= 0;
+}
+
+export function shuffle<T>(input: readonly T[]): T[] {
+  const arr = [...input];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// Reorder a question's options to match a stored "C,A,D,B" order string.
+// Any labels missing from the stored order (e.g. data drift) are appended so
+// no option is ever hidden, and an empty/invalid order falls back to default.
+export function reorderOptions<T extends { label: string }>(
+  orderStr: string | null | undefined,
+  options: readonly T[],
+): T[] {
+  if (!orderStr) return [...options];
+  const byLabel = new Map(options.map((o) => [o.label, o]));
+  const seen = new Set<string>();
+  const ordered: T[] = [];
+  for (const label of orderStr.split(",")) {
+    const opt = byLabel.get(label);
+    if (opt && !seen.has(label)) {
+      ordered.push(opt);
+      seen.add(label);
+    }
+  }
+  for (const o of options) {
+    if (!seen.has(o.label)) ordered.push(o);
+  }
+  return ordered.length > 0 ? ordered : [...options];
 }
 
 interface SavedAnswer {
   question_id: number;
   selected_option: string | null;
   flagged: number;
+  option_order: string | null;
 }
 
 export async function loadSavedAnswers(
@@ -60,7 +100,7 @@ export async function loadSavedAnswers(
 ): Promise<Map<number, SavedAnswer>> {
   const pool = getPool();
   const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT question_id, selected_option, flagged
+    `SELECT question_id, selected_option, flagged, option_order
        FROM app_attempt_questions WHERE attempt_id = ? ORDER BY position ASC`,
     [attemptId],
   );
@@ -70,6 +110,7 @@ export async function loadSavedAnswers(
       question_id: r.question_id as number,
       selected_option: (r.selected_option as string | null) ?? null,
       flagged: r.flagged as number,
+      option_order: (r.option_order as string | null) ?? null,
     });
   }
   return map;

@@ -16,6 +16,8 @@ export interface AttemptDetail {
   /** @nullable */
   submittedAt?: string | null;
   timeLimitSeconds: number;
-  remainingSeconds: number;
+  /** @nullable */
+  remainingSeconds: number | null;
+  currentPosition: number;
   questions: QuestionDetail[];
 }
