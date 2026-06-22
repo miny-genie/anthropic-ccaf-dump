@@ -7,11 +7,23 @@ import {
   useUpdateAttemptProgress,
   useToggleBookmark,
   useSetNote,
+  useResetPracticeAttempt,
   getGetAttemptQueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   CheckCircle,
   XCircle,
@@ -20,6 +32,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  RotateCcw,
+  LogOut,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -30,7 +44,19 @@ export default function Exam() {
   const queryClient = useQueryClient();
 
   const { data: attempt, isLoading } = useGetAttempt(attemptId, {
-    query: { enabled: !!attemptId, queryKey: getGetAttemptQueryKey(attemptId) },
+    query: {
+      enabled: !!attemptId,
+      queryKey: getGetAttemptQueryKey(attemptId),
+      // The attempt is owned by optimistic setQueryData writes (answer / clear /
+      // flag / bookmark / note). A background refetch returns pre-mutation server
+      // state and silently clobbers those writes — e.g. re-showing practice
+      // feedback right after re-clicking cleared it. staleTime: Infinity makes any
+      // refetch serve the cache instead of the network, so optimistic state
+      // sticks. Fresh server state is loaded on hard reload (empty cache); this is
+      // scoped to this query so other pages (dashboard, notebook, history) keep
+      // default on-mount freshness.
+      staleTime: Infinity,
+    },
   });
 
   const saveAnswerMutation = useSaveAnswer();
@@ -38,6 +64,7 @@ export default function Exam() {
   const progressMutation = useUpdateAttemptProgress();
   const bookmarkMutation = useToggleBookmark();
   const noteMutation = useSetNote();
+  const resetMutation = useResetPracticeAttempt();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
@@ -138,26 +165,63 @@ export default function Exam() {
 
   const handleSelectOption = (optionLabel: string) => {
     if (saveAnswerMutation.isPending) return;
-    // Lock practice answers once chosen (the correct answer is revealed).
-    if (!isReal && currentQuestion.selectedOption) return;
 
-    patchQuestion(currentQuestion.id, { selectedOption: optionLabel });
+    if (isReal) {
+      // Real test: selection is changeable, but no feedback is revealed.
+      patchQuestion(currentQuestion.id, { selectedOption: optionLabel });
+      saveAnswerMutation.mutate({
+        id: attemptId,
+        data: { questionId: currentQuestion.id, selectedOption: optionLabel },
+      });
+      return;
+    }
+
+    // Practice: answers are never locked. Re-clicking the chosen option clears
+    // it (hiding feedback); choosing another option changes the answer and
+    // refreshes feedback.
+    const cleared = currentQuestion.selectedOption === optionLabel;
+    const nextValue = cleared ? null : optionLabel;
+
+    // Optimistically reflect the change; keep feedback hidden until the server
+    // responds with fresh correctness for the new selection.
+    patchQuestion(currentQuestion.id, {
+      selectedOption: nextValue,
+      isCorrect: null,
+      correctOption: null,
+    });
 
     saveAnswerMutation.mutate(
       {
         id: attemptId,
-        data: { questionId: currentQuestion.id, selectedOption: optionLabel },
+        data: { questionId: currentQuestion.id, selectedOption: nextValue },
       },
       {
         onSuccess: (result) => {
           patchQuestion(currentQuestion.id, {
-            selectedOption: optionLabel,
-            isCorrect: result.isCorrect ?? null,
-            correctOption: result.correctOption ?? null,
+            selectedOption: nextValue,
+            isCorrect: nextValue === null ? null : result.isCorrect ?? null,
+            correctOption:
+              nextValue === null ? null : result.correctOption ?? null,
           });
         },
       },
     );
+  };
+
+  const handleResetPractice = () => {
+    if (resetMutation.isPending) return;
+    resetMutation.mutate(undefined, {
+      onSuccess: (fresh) => {
+        // Seed the cache so the new attempt renders immediately, then reset
+        // local cursor/note state and navigate to the fresh attempt.
+        queryClient.setQueryData(getGetAttemptQueryKey(fresh.id), fresh);
+        initializedRef.current = false;
+        setCurrentIndex(0);
+        setTimeLeft(null);
+        setNoteDraft("");
+        setLocation(`/exam/${fresh.id}`);
+      },
+    });
   };
 
   const handleToggleFlag = () => {
@@ -233,14 +297,54 @@ export default function Exam() {
                 {formatTime(timeLeft)}
               </div>
             )}
-            <Button
-              variant="default"
-              className="bg-[#181715] hover:bg-[#252320] text-white"
-              onClick={handleSubmit}
-              disabled={submitMutation.isPending}
-            >
-              {isReal ? "Submit Exam" : "Finish Practice"}
-            </Button>
+            {isReal ? (
+              <Button
+                variant="default"
+                className="bg-[#181715] hover:bg-[#252320] text-white"
+                onClick={handleSubmit}
+                disabled={submitMutation.isPending}
+              >
+                Submit Exam
+              </Button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  className="text-muted-foreground"
+                  onClick={() => setLocation("/modes")}
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Exit
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      disabled={resetMutation.isPending}
+                    >
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Reset Practice
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Start over?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This clears all your practice answers, feedback, and
+                        saved position, then reshuffles the questions for a
+                        fresh run. Your bookmarks and personal notes are kept.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleResetPractice}>
+                        Reset Practice
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -308,7 +412,10 @@ export default function Exam() {
           <div className="space-y-3 pt-4">
             {currentQuestion.options.map((opt) => {
               const isSelected = currentQuestion.selectedOption === opt.label;
-              const showCorrectness = !isReal && !!currentQuestion.selectedOption;
+              const showCorrectness =
+                !isReal &&
+                !!currentQuestion.selectedOption &&
+                currentQuestion.correctOption != null;
               const isActuallyCorrect =
                 showCorrectness && correctOption === opt.label;
               const isWrongSelection =
@@ -343,9 +450,7 @@ export default function Exam() {
                 <button
                   key={opt.label}
                   onClick={() => handleSelectOption(opt.label)}
-                  disabled={Boolean(
-                    !isReal && currentQuestion.selectedOption !== null,
-                  )}
+                  disabled={saveAnswerMutation.isPending}
                   className={`w-full flex items-start gap-4 p-5 rounded-xl border-2 text-left transition-all duration-200 ${btnClass}`}
                 >
                   <div

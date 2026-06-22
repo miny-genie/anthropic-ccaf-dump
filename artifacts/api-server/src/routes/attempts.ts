@@ -18,7 +18,7 @@ import {
 } from "@workspace/api-zod";
 import { getPool } from "../lib/db";
 import { requireAuth, type AuthedRequest } from "../lib/auth";
-import { getQuestionsForSource, getQuestionsByIds } from "../lib/examData";
+import { getQuestionsByIds, getPracticeSourceId } from "../lib/examData";
 import {
   loadAttempt,
   loadSavedAnswers,
@@ -27,9 +27,10 @@ import {
   isExpired,
   computeScore,
   persistScore,
-  shuffle,
   reorderOptions,
-  REAL_TEST_TIME_LIMIT,
+  createAttempt,
+  findActivePracticeAttempt,
+  deletePracticeAttempts,
   type AttemptRow,
   type ScoredResult,
 } from "../lib/attempts";
@@ -213,39 +214,75 @@ router.post("/attempts", requireAuth, async (req, res) => {
     return;
   }
   const isReal = Boolean(srcRows[0].is_real_test);
+  // Practice has a single persistent attempt managed only by /attempts/practice.
+  // This generic endpoint may only start real-test attempts.
+  if (!isReal) {
+    res.status(400).json({ error: "Use /attempts/practice for practice attempts" });
+    return;
+  }
 
-  const sourceQuestions = await getQuestionsForSource(sourceId);
-  if (sourceQuestions.length === 0) {
+  let attemptId: number;
+  try {
+    attemptId = await createAttempt(userId, sourceId, isReal);
+  } catch {
     res.status(400).json({ error: "Source has no questions" });
     return;
   }
 
-  // Real tests are strictly timed; practice mode is untimed (sentinel 0).
-  const timeLimit = isReal ? REAL_TEST_TIME_LIMIT : 0;
-
-  const [result] = await pool.query<ResultSetHeader>(
-    `INSERT INTO app_attempts
-       (user_id, source_id, is_real_test, time_limit_seconds, total_count)
-     VALUES (?, ?, ?, ?, ?)`,
-    [userId, sourceId, isReal ? 1 : 0, timeLimit, sourceQuestions.length],
-  );
-  const attemptId = result.insertId;
-
-  // Randomize question order per attempt, and option order per question.
-  const ordered = shuffle(sourceQuestions);
-  const values = ordered.map((q, idx) => {
-    const optionOrder = shuffle(q.options.map((o) => o.label)).join(",");
-    return [attemptId, q.id, idx + 1, optionOrder];
-  });
-  await pool.query(
-    `INSERT INTO app_attempt_questions (attempt_id, question_id, position, option_order)
-     VALUES ?`,
-    [values],
-  );
-
   const attempt = await loadAttempt(attemptId, userId);
   const detail = await buildAttemptDetail(attempt!);
   res.status(201).json(GetAttemptResponse.parse(detail));
+});
+
+// Practice Mode uses a single, persistent attempt against one fixed source.
+// Return the user's active practice attempt, creating one only if none exists.
+router.post("/attempts/practice", requireAuth, async (req, res) => {
+  const userId = (req as AuthedRequest).userId;
+  const sourceId = await getPracticeSourceId();
+  if (sourceId == null) {
+    res.status(400).json({ error: "Practice source is not configured" });
+    return;
+  }
+
+  let attempt = await findActivePracticeAttempt(userId, sourceId);
+  if (!attempt) {
+    let attemptId: number;
+    try {
+      attemptId = await createAttempt(userId, sourceId, false);
+    } catch {
+      res.status(400).json({ error: "Practice source has no questions" });
+      return;
+    }
+    attempt = await loadAttempt(attemptId, userId);
+  }
+
+  const detail = await buildAttemptDetail(attempt!);
+  res.json(GetAttemptResponse.parse(detail));
+});
+
+// Explicit "Start Over": discard the active practice attempt and begin a fresh
+// one (re-shuffled). Cross-attempt study data is preserved by design.
+router.post("/attempts/practice/reset", requireAuth, async (req, res) => {
+  const userId = (req as AuthedRequest).userId;
+  const sourceId = await getPracticeSourceId();
+  if (sourceId == null) {
+    res.status(400).json({ error: "Practice source is not configured" });
+    return;
+  }
+
+  await deletePracticeAttempts(userId, sourceId);
+
+  let attemptId: number;
+  try {
+    attemptId = await createAttempt(userId, sourceId, false);
+  } catch {
+    res.status(400).json({ error: "Practice source has no questions" });
+    return;
+  }
+
+  const attempt = await loadAttempt(attemptId, userId);
+  const detail = await buildAttemptDetail(attempt!);
+  res.json(GetAttemptResponse.parse(detail));
 });
 
 router.get("/attempts/:id", requireAuth, async (req, res) => {
@@ -333,15 +370,32 @@ router.post("/attempts/:id/answer", requireAuth, async (req, res) => {
   }
 
   const isReal = Boolean(attempt.is_real_test);
-  if (isReal || selectedOption == null) {
+  if (isReal) {
+    res.json(SaveAnswerResponse.parse({ saved: true }));
+    return;
+  }
+
+  // Flag-only updates (selectedOption omitted) must not touch the notebook.
+  if (selectedOption === undefined) {
+    res.json(SaveAnswerResponse.parse({ saved: true }));
+    return;
+  }
+
+  // Practice answers can be changed or cleared freely. Keep the wrong-answer
+  // notebook consistent: drop the entry when the selection is cleared or now
+  // correct, and (re)record it only while the current answer is wrong.
+  if (selectedOption === null) {
+    await pool.query<ResultSetHeader>(
+      `DELETE FROM app_wrong_answers
+        WHERE user_id = ? AND question_id = ? AND is_real_test = 0`,
+      [userId, questionId],
+    );
     res.json(SaveAnswerResponse.parse({ saved: true }));
     return;
   }
 
   const isCorrect = q ? selectedOption === q.correctOption : null;
 
-  // Practice may never be formally submitted, so record misses into the
-  // wrong-answer notebook immediately as the user studies.
   if (q && isCorrect === false) {
     await pool.query<ResultSetHeader>(
       `INSERT INTO app_wrong_answers
@@ -352,6 +406,12 @@ router.post("/attempts/:id/answer", requireAuth, async (req, res) => {
          correct_option = VALUES(correct_option),
          resolved_at = NULL`,
       [userId, questionId, selectedOption, q.correctOption],
+    );
+  } else if (q && isCorrect === true) {
+    await pool.query<ResultSetHeader>(
+      `DELETE FROM app_wrong_answers
+        WHERE user_id = ? AND question_id = ? AND is_real_test = 0`,
+      [userId, questionId],
     );
   }
 
@@ -399,6 +459,11 @@ router.post("/attempts/:id/submit", requireAuth, async (req, res) => {
   const attempt = await loadAttempt(params.data.id, userId);
   if (!attempt) {
     res.status(404).json({ error: "Attempt not found" });
+    return;
+  }
+  // Practice attempts are never submitted — they persist until explicit reset.
+  if (!attempt.is_real_test) {
+    res.status(400).json({ error: "Practice attempts cannot be submitted" });
     return;
   }
   const scored = await computeScore(attempt);

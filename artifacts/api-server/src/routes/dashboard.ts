@@ -3,6 +3,8 @@ import type { RowDataPacket } from "mysql2";
 import { GetDashboardResponse } from "@workspace/api-zod";
 import { getPool } from "../lib/db";
 import { requireAuth, type AuthedRequest } from "../lib/auth";
+import { getPracticeSourceId } from "../lib/examData";
+import { findActivePracticeAttempt } from "../lib/attempts";
 
 const router: IRouter = Router();
 
@@ -52,16 +54,28 @@ router.get("/dashboard", requireAuth, async (req, res) => {
     [userId],
   );
 
-  const [mockRows] = await pool.query<RowDataPacket[]>(
-    `SELECT COUNT(*) AS attempts,
-            AVG(correct_count / total_count) AS avg_ratio,
-            MAX(correct_count / total_count) AS best_ratio
-       FROM app_attempts
-      WHERE user_id = ? AND is_real_test = 0 AND submitted_at IS NOT NULL
-        AND total_count > 0`,
-    [userId],
-  );
-  const m = mockRows[0];
+  // Practice is one persistent, never-submitted attempt, so progress is derived
+  // live from how many questions in THAT attempt are answered. Scope strictly to
+  // the same active practice attempt the Practice button opens (by source + latest
+  // unsubmitted), not all non-real attempts, so legacy data can't inflate it.
+  let answered = 0;
+  let total = 0;
+  const practiceSourceId = await getPracticeSourceId();
+  if (practiceSourceId != null) {
+    const activePractice = await findActivePracticeAttempt(userId, practiceSourceId);
+    if (activePractice) {
+      const [progressRows] = await pool.query<RowDataPacket[]>(
+        `SELECT
+            COUNT(id) AS total,
+            COUNT(selected_option) AS answered
+           FROM app_attempt_questions
+          WHERE attempt_id = ?`,
+        [activePractice.id],
+      );
+      total = Number(progressRows[0].total);
+      answered = Number(progressRows[0].answered);
+    }
+  }
 
   const [realRows] = await pool.query<RowDataPacket[]>(
     `SELECT COUNT(*) AS attempts,
@@ -89,10 +103,11 @@ router.get("/dashboard", requireAuth, async (req, res) => {
       createdAt: new Date(u.created_at).toISOString(),
     },
     recentAttempts: recent.map(attemptSummary),
-    mockupStats: {
-      attempts: Number(m.attempts),
-      avgPercent: m.avg_ratio == null ? 0 : Math.round(Number(m.avg_ratio) * 1000) / 10,
-      bestPercent: m.best_ratio == null ? 0 : Math.round(Number(m.best_ratio) * 1000) / 10,
+    practiceProgress: {
+      answered,
+      total,
+      percentComplete:
+        total > 0 ? Math.round((answered / total) * 1000) / 10 : 0,
     },
     realTestStat: {
       attempts: Number(rt.attempts),

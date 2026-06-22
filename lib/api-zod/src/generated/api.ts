@@ -88,10 +88,10 @@ export const GetDashboardResponse = zod.object({
   "totalCount": zod.number(),
   "percent": zod.number().nullish()
 })),
-  "mockupStats": zod.object({
-  "attempts": zod.number(),
-  "avgPercent": zod.number(),
-  "bestPercent": zod.number()
+  "practiceProgress": zod.object({
+  "answered": zod.number(),
+  "total": zod.number(),
+  "percentComplete": zod.number()
 }),
   "realTestStat": zod.object({
   "attempts": zod.number(),
@@ -128,6 +128,70 @@ export const ListAttemptsResponse = zod.array(ListAttemptsResponseItem)
 export const StartAttemptBody = zod.object({
   "sourceId": zod.number(),
   "timeLimitSeconds": zod.number().nullish()
+})
+
+
+/**
+ * @summary Get the user's single persistent practice attempt, creating it if needed
+ */
+export const GetOrCreatePracticeAttemptResponse = zod.object({
+  "id": zod.number(),
+  "sourceId": zod.number(),
+  "isRealTest": zod.boolean(),
+  "title": zod.string(),
+  "startedAt": zod.string(),
+  "submittedAt": zod.string().nullish(),
+  "timeLimitSeconds": zod.number(),
+  "remainingSeconds": zod.number().nullable(),
+  "currentPosition": zod.number(),
+  "questions": zod.array(zod.object({
+  "id": zod.number(),
+  "questionNo": zod.number(),
+  "scenario": zod.string().nullish(),
+  "questionText": zod.string(),
+  "options": zod.array(zod.object({
+  "label": zod.string(),
+  "text": zod.string()
+})),
+  "selectedOption": zod.string().nullish(),
+  "flagged": zod.boolean(),
+  "bookmarked": zod.boolean(),
+  "note": zod.string().nullish(),
+  "isCorrect": zod.boolean().nullish(),
+  "correctOption": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary Discard the active practice attempt and start a fresh one
+ */
+export const ResetPracticeAttemptResponse = zod.object({
+  "id": zod.number(),
+  "sourceId": zod.number(),
+  "isRealTest": zod.boolean(),
+  "title": zod.string(),
+  "startedAt": zod.string(),
+  "submittedAt": zod.string().nullish(),
+  "timeLimitSeconds": zod.number(),
+  "remainingSeconds": zod.number().nullable(),
+  "currentPosition": zod.number(),
+  "questions": zod.array(zod.object({
+  "id": zod.number(),
+  "questionNo": zod.number(),
+  "scenario": zod.string().nullish(),
+  "questionText": zod.string(),
+  "options": zod.array(zod.object({
+  "label": zod.string(),
+  "text": zod.string()
+})),
+  "selectedOption": zod.string().nullish(),
+  "flagged": zod.boolean(),
+  "bookmarked": zod.boolean(),
+  "note": zod.string().nullish(),
+  "isCorrect": zod.boolean().nullish(),
+  "correctOption": zod.string().nullish()
+}))
 })
 
 

@@ -6,8 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface MockupStats {
-  attempts: number;
-  avgPercent: number;
-  bestPercent: number;
+export interface PracticeProgress {
+  answered: number;
+  total: number;
+  percentComplete: number;
 }

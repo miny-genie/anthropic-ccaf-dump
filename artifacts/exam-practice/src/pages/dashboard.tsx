@@ -1,12 +1,23 @@
-import { useGetDashboard } from "@workspace/api-client-react";
+import {
+  useGetDashboard,
+  useGetOrCreatePracticeAttempt,
+} from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { BookOpen, CheckCircle, Clock, XCircle, Bookmark, FileText } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Dashboard() {
   const { data: dashboard, isLoading } = useGetDashboard();
+  const practiceMutation = useGetOrCreatePracticeAttempt();
+  const [, setLocation] = useLocation();
+
+  const handleStartPractice = () => {
+    practiceMutation.mutate(undefined, {
+      onSuccess: (attempt) => setLocation(`/exam/${attempt.id}`),
+    });
+  };
 
   if (isLoading) {
     return (
@@ -53,12 +64,14 @@ export default function Dashboard() {
 
         <Card className="bg-card border-card-border shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Mockup Avg</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Practice Progress</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-serif text-foreground">{dashboard.mockupStats.avgPercent}%</span>
-              <span className="text-sm text-muted-foreground">in {dashboard.mockupStats.attempts} sessions</span>
+              <span className="text-4xl font-serif text-foreground">{dashboard.practiceProgress.percentComplete}%</span>
+              <span className="text-sm text-muted-foreground">
+                {dashboard.practiceProgress.answered} of {dashboard.practiceProgress.total} answered
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -95,13 +108,15 @@ export default function Dashboard() {
             <BookOpen className="w-8 h-8 text-primary mb-4" />
             <h3 className="font-serif text-2xl mb-2 text-foreground">Practice Mode</h3>
             <p className="text-muted-foreground mb-6">
-              Take untimed practice tests with immediate feedback on each question.
+              Untimed, open-ended study with instant feedback. Picks up right where you left off.
             </p>
-            <Link href="/modes">
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
-                Choose a Module
-              </Button>
-            </Link>
+            <Button
+              onClick={handleStartPractice}
+              disabled={practiceMutation.isPending}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {practiceMutation.isPending ? "Opening..." : "Start Practice"}
+            </Button>
           </CardContent>
         </Card>
 

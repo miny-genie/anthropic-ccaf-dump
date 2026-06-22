@@ -11,13 +11,23 @@ import Login from "@/pages/login";
 import Layout from "@/components/layout";
 import Dashboard from "@/pages/dashboard";
 import Modes from "@/pages/modes";
-import Practice from "@/pages/practice";
 import History from "@/pages/history";
 import Notebook from "@/pages/notebook";
 import Exam from "@/pages/exam";
 import Result from "@/pages/result";
 
-const queryClient = new QueryClient();
+// This app drives its caches through optimistic setQueryData with no mutation
+// invalidation, so a window-focus background refetch would return pre-mutation
+// server state and clobber optimistic writes — e.g. re-showing practice feedback
+// right after it was cleared. Disabling focus refetch closes that race while
+// leaving staleTime at 0 so pages still refetch fresh data on mount/navigation.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function ProtectedRoute({
   component: Component,
@@ -60,7 +70,6 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
       <Route path="/modes" component={() => <ProtectedRoute component={Modes} />} />
-      <Route path="/practice" component={() => <ProtectedRoute component={Practice} />} />
       <Route path="/history" component={() => <ProtectedRoute component={History} />} />
       <Route path="/notebook" component={() => <ProtectedRoute component={Notebook} />} />
       <Route path="/exam/:id" component={() => <ProtectedRoute component={Exam} bare />} />

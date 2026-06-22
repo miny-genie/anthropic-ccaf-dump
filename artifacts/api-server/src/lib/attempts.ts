@@ -1,6 +1,10 @@
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
 import { getPool } from "./db";
-import { getQuestionsByIds, type QuestionRow } from "./examData";
+import {
+  getQuestionsByIds,
+  getQuestionsForSource,
+  type QuestionRow,
+} from "./examData";
 
 export const REAL_TEST_TIME_LIMIT = 2 * 60 * 60;
 export const MOCKUP_DEFAULT_TIME_LIMIT = 2 * 60 * 60;
@@ -262,6 +266,98 @@ export async function persistScore(
       );
     }
 
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+// Create a fresh attempt: shuffle question order and per-question option labels,
+// persist both, and return the new attempt id. Practice is untimed (sentinel 0).
+export async function createAttempt(
+  userId: number,
+  sourceId: number,
+  isReal: boolean,
+): Promise<number> {
+  const pool = getPool();
+  const sourceQuestions = await getQuestionsForSource(sourceId);
+  if (sourceQuestions.length === 0) {
+    throw new Error("Source has no questions");
+  }
+  const timeLimit = isReal ? REAL_TEST_TIME_LIMIT : 0;
+
+  const [result] = await pool.query<ResultSetHeader>(
+    `INSERT INTO app_attempts
+       (user_id, source_id, is_real_test, time_limit_seconds, total_count)
+     VALUES (?, ?, ?, ?, ?)`,
+    [userId, sourceId, isReal ? 1 : 0, timeLimit, sourceQuestions.length],
+  );
+  const attemptId = result.insertId;
+
+  const ordered = shuffle(sourceQuestions);
+  const values = ordered.map((q, idx) => {
+    const optionOrder = shuffle(q.options.map((o) => o.label)).join(",");
+    return [attemptId, q.id, idx + 1, optionOrder];
+  });
+  await pool.query(
+    `INSERT INTO app_attempt_questions (attempt_id, question_id, position, option_order)
+     VALUES ?`,
+    [values],
+  );
+  return attemptId;
+}
+
+// The single, persistent practice attempt for a user (latest non-submitted).
+export async function findActivePracticeAttempt(
+  userId: number,
+  sourceId: number,
+): Promise<AttemptRow | null> {
+  const pool = getPool();
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT id, user_id, source_id, is_real_test, time_limit_seconds, current_position,
+            started_at, submitted_at, score_raw, score_scaled, passed, correct_count,
+            total_count
+       FROM app_attempts
+      WHERE user_id = ? AND source_id = ? AND is_real_test = 0 AND submitted_at IS NULL
+      ORDER BY started_at DESC, id DESC
+      LIMIT 1`,
+    [userId, sourceId],
+  );
+  if (rows.length === 0) return null;
+  return rows[0] as unknown as AttemptRow;
+}
+
+// Discard any active practice attempts (and their per-question rows) for a user
+// so a fresh practice run can begin. Cross-attempt study data (notes, bookmarks,
+// wrong-answer notebook) is keyed by user+question and intentionally preserved.
+export async function deletePracticeAttempts(
+  userId: number,
+  sourceId: number,
+): Promise<void> {
+  const pool = getPool();
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [rows] = await conn.query<RowDataPacket[]>(
+      `SELECT id FROM app_attempts
+        WHERE user_id = ? AND source_id = ? AND is_real_test = 0 AND submitted_at IS NULL`,
+      [userId, sourceId],
+    );
+    const ids = rows.map((r) => r.id as number);
+    if (ids.length > 0) {
+      const placeholders = ids.map(() => "?").join(",");
+      await conn.query(
+        `DELETE FROM app_attempt_questions WHERE attempt_id IN (${placeholders})`,
+        ids,
+      );
+      await conn.query(
+        `DELETE FROM app_attempts WHERE id IN (${placeholders})`,
+        ids,
+      );
+    }
     await conn.commit();
   } catch (err) {
     await conn.rollback();

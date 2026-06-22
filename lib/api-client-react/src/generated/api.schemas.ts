@@ -155,10 +155,10 @@ export interface AttemptSummary {
   percent?: number | null;
 }
 
-export interface MockupStats {
-  attempts: number;
-  avgPercent: number;
-  bestPercent: number;
+export interface PracticeProgress {
+  answered: number;
+  total: number;
+  percentComplete: number;
 }
 
 export interface RealTestStat {
@@ -170,7 +170,7 @@ export interface RealTestStat {
 export interface DashboardSummary {
   user: User;
   recentAttempts: AttemptSummary[];
-  mockupStats: MockupStats;
+  practiceProgress: PracticeProgress;
   realTestStat: RealTestStat;
   wrongAnswerCount: number;
   bookmarkCount: number;

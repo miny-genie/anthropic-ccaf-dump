@@ -1,2 +1,3 @@
 - [TiDB connection](tidb-connection.md) — TIDB_HOST has http:// prefix+slash (sanitize before use); TLS required; use mysql2 not Postgres; no python3 in env.
-- [Orval codegen ordering](orval-codegen.md) — generated Zod/hook names = PascalCase(operationId)+Body/Params/Response; define the OpenAPI op before code that imports them, then run codegen.
+- [Orval codegen](orval-codegen.md) — generated names = PascalCase(operationId)+suffix; spec must lead route code; `z.coerce.boolean()` makes "false" → true.
+- [React Query optimistic cache](react-query-optimistic-cache.md) — app uses optimistic setQueryData with no invalidation; disable refetchOnWindowFocus + set staleTime or refetch clobbers writes.

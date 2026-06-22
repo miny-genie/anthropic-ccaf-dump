@@ -6,14 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AttemptSummary } from './attemptSummary';
-import type { MockupStats } from './mockupStats';
+import type { PracticeProgress } from './practiceProgress';
 import type { RealTestStat } from './realTestStat';
 import type { User } from './user';
 
 export interface DashboardSummary {
   user: User;
   recentAttempts: AttemptSummary[];
-  mockupStats: MockupStats;
+  practiceProgress: PracticeProgress;
   realTestStat: RealTestStat;
   wrongAnswerCount: number;
   bookmarkCount: number;

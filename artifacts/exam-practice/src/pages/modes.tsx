@@ -1,4 +1,8 @@
-import { useListSources, useStartAttempt } from "@workspace/api-client-react";
+import {
+  useListSources,
+  useStartAttempt,
+  useGetOrCreatePracticeAttempt,
+} from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
@@ -7,6 +11,7 @@ import { BookOpen, Clock, FileText, ChevronRight } from "lucide-react";
 export default function Modes() {
   const { data: sources, isLoading } = useListSources();
   const startMutation = useStartAttempt();
+  const practiceMutation = useGetOrCreatePracticeAttempt();
   const [, setLocation] = useLocation();
 
   if (isLoading) {
@@ -20,7 +25,6 @@ export default function Modes() {
   }
 
   const realTestSource = sources?.find(s => s.isRealTest);
-  const practiceSources = sources?.filter(s => !s.isRealTest) || [];
 
   const handleStartRealTest = () => {
     if (!realTestSource) return;
@@ -32,6 +36,14 @@ export default function Modes() {
         }
       }
     );
+  };
+
+  const handleStartPractice = () => {
+    practiceMutation.mutate(undefined, {
+      onSuccess: (attempt) => {
+        setLocation(`/exam/${attempt.id}`);
+      },
+    });
   };
 
   return (
@@ -50,14 +62,16 @@ export default function Modes() {
             <BookOpen className="w-8 h-8 text-primary mb-4" />
             <h3 className="font-serif text-2xl mb-2 text-foreground">Practice Mode</h3>
             <p className="text-muted-foreground mb-6 flex-1">
-              Take untimed practice tests with immediate feedback on each question. Focus on learning.
+              Untimed, open-ended study with instant feedback on each question. Your progress is always saved.
             </p>
-            <Link href="/practice">
-              <Button className="w-full justify-between bg-background text-foreground hover:bg-background/90 border border-border">
-                Select Module
-                <ChevronRight className="w-4 h-4 ml-2" />
-              </Button>
-            </Link>
+            <Button
+              onClick={handleStartPractice}
+              disabled={practiceMutation.isPending}
+              className="w-full justify-between bg-background text-foreground hover:bg-background/90 border border-border"
+            >
+              {practiceMutation.isPending ? "Opening..." : "Start Practice"}
+              <ChevronRight className="w-4 h-4 ml-2" />
+            </Button>
           </CardContent>
         </Card>
 

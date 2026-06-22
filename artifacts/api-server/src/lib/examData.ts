@@ -1,6 +1,19 @@
 import type { RowDataPacket } from "mysql2";
 import { getPool } from "./db";
 
+// The single source used by Practice Mode. Practice never shows a source picker.
+export const PRACTICE_SOURCE_KEY = "claude_cert_mock_exam_html";
+
+// Resolve the practice source id by its stable key. Returns null if missing.
+export async function getPracticeSourceId(): Promise<number | null> {
+  const pool = getPool();
+  const [rows] = await pool.query<RowDataPacket[]>(
+    "SELECT id FROM exam_sources WHERE source_key = ? LIMIT 1",
+    [PRACTICE_SOURCE_KEY],
+  );
+  return rows.length > 0 ? (rows[0].id as number) : null;
+}
+
 export interface OptionRow {
   label: string;
   text: string;

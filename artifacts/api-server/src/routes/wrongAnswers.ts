@@ -17,6 +17,23 @@ import { setNote } from "../lib/notes";
 
 const router: IRouter = Router();
 
+// The generated query schemas validate booleans with `z.coerce.boolean()`,
+// which treats any non-empty string as `true` (so the string "false" wrongly
+// becomes `true`). Normalize the known boolean query params from their string
+// form to real booleans before validation so filters like `isRealTest=false`
+// behave correctly.
+function normalizeBoolQuery(
+  query: Record<string, unknown>,
+  keys: string[],
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...query };
+  for (const k of keys) {
+    if (out[k] === "true") out[k] = true;
+    else if (out[k] === "false") out[k] = false;
+  }
+  return out;
+}
+
 interface WaRow extends RowDataPacket {
   id: number;
   question_id: number;
@@ -51,7 +68,12 @@ async function buildWrongAnswers(rows: WaRow[]) {
 
 router.get("/wrong-answers", requireAuth, async (req, res) => {
   const userId = (req as AuthedRequest).userId;
-  const params = ListWrongAnswersQueryParams.safeParse(req.query);
+  const params = ListWrongAnswersQueryParams.safeParse(
+    normalizeBoolQuery(req.query as Record<string, unknown>, [
+      "isRealTest",
+      "resolved",
+    ]),
+  );
   if (!params.success) {
     res.status(400).json({ error: "Invalid query" });
     return;
@@ -105,7 +127,9 @@ router.get("/wrong-answers/scenarios", requireAuth, async (req, res) => {
 
 router.get("/wrong-answers/review", requireAuth, async (req, res) => {
   const userId = (req as AuthedRequest).userId;
-  const params = GetWrongAnswerReviewQueryParams.safeParse(req.query);
+  const params = GetWrongAnswerReviewQueryParams.safeParse(
+    normalizeBoolQuery(req.query as Record<string, unknown>, ["isRealTest"]),
+  );
   if (!params.success) {
     res.status(400).json({ error: "Invalid query" });
     return;

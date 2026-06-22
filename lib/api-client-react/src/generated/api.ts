@@ -656,6 +656,146 @@ export const useStartAttempt = <TError = ErrorType<ErrorResponse>,
       return useMutation(getStartAttemptMutationOptions(options));
     }
 
+export const getGetOrCreatePracticeAttemptUrl = () => {
+
+
+
+
+  return `/api/attempts/practice`
+}
+
+/**
+ * @summary Get the user's single persistent practice attempt, creating it if needed
+ */
+export const getOrCreatePracticeAttempt = async ( options?: RequestInit): Promise<AttemptDetail> => {
+
+  return customFetch<AttemptDetail>(getGetOrCreatePracticeAttemptUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGetOrCreatePracticeAttemptMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getOrCreatePracticeAttempt>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof getOrCreatePracticeAttempt>>, TError,void, TContext> => {
+
+const mutationKey = ['getOrCreatePracticeAttempt'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof getOrCreatePracticeAttempt>>, void> = () => {
+
+
+          return  getOrCreatePracticeAttempt(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GetOrCreatePracticeAttemptMutationResult = NonNullable<Awaited<ReturnType<typeof getOrCreatePracticeAttempt>>>
+
+    export type GetOrCreatePracticeAttemptMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Get the user's single persistent practice attempt, creating it if needed
+ */
+export const useGetOrCreatePracticeAttempt = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getOrCreatePracticeAttempt>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof getOrCreatePracticeAttempt>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getGetOrCreatePracticeAttemptMutationOptions(options));
+    }
+
+export const getResetPracticeAttemptUrl = () => {
+
+
+
+
+  return `/api/attempts/practice/reset`
+}
+
+/**
+ * @summary Discard the active practice attempt and start a fresh one
+ */
+export const resetPracticeAttempt = async ( options?: RequestInit): Promise<AttemptDetail> => {
+
+  return customFetch<AttemptDetail>(getResetPracticeAttemptUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getResetPracticeAttemptMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetPracticeAttempt>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resetPracticeAttempt>>, TError,void, TContext> => {
+
+const mutationKey = ['resetPracticeAttempt'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resetPracticeAttempt>>, void> = () => {
+
+
+          return  resetPracticeAttempt(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResetPracticeAttemptMutationResult = NonNullable<Awaited<ReturnType<typeof resetPracticeAttempt>>>
+
+    export type ResetPracticeAttemptMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Discard the active practice attempt and start a fresh one
+ */
+export const useResetPracticeAttempt = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetPracticeAttempt>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof resetPracticeAttempt>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getResetPracticeAttemptMutationOptions(options));
+    }
+
 export const getGetAttemptUrl = (id: number,) => {
 
 

@@ -153,6 +153,38 @@ paths:
           $ref: "#/components/responses/Error"
         "401":
           $ref: "#/components/responses/Error"
+  /attempts/practice:
+    post:
+      operationId: getOrCreatePracticeAttempt
+      tags: [attempts]
+      summary: Get the user's single persistent practice attempt, creating it if needed
+      responses:
+        "200":
+          description: Practice attempt detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttemptDetail"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+  /attempts/practice/reset:
+    post:
+      operationId: resetPracticeAttempt
+      tags: [attempts]
+      summary: Discard the active practice attempt and start a fresh one
+      responses:
+        "200":
+          description: New practice attempt detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttemptDetail"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
   /attempts/{id}:
     get:
       operationId: getAttempt
@@ -689,15 +721,15 @@ components:
           type: integer
         percent:
           type: ["number", "null"]
-    MockupStats:
+    PracticeProgress:
       type: object
-      required: [attempts, avgPercent, bestPercent]
+      required: [answered, total, percentComplete]
       properties:
-        attempts:
+        answered:
           type: integer
-        avgPercent:
-          type: number
-        bestPercent:
+        total:
+          type: integer
+        percentComplete:
           type: number
     RealTestStat:
       type: object
@@ -715,7 +747,7 @@ components:
         [
           user,
           recentAttempts,
-          mockupStats,
+          practiceProgress,
           realTestStat,
           wrongAnswerCount,
           bookmarkCount,
@@ -727,8 +759,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AttemptSummary"
-        mockupStats:
-          $ref: "#/components/schemas/MockupStats"
+        practiceProgress:
+          $ref: "#/components/schemas/PracticeProgress"
         realTestStat:
           $ref: "#/components/schemas/RealTestStat"
         wrongAnswerCount:
