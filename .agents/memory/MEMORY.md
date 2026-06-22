@@ -1,0 +1,1 @@
+- [TiDB connection](tidb-connection.md) — TIDB_HOST has http:// prefix+slash (sanitize before use); TLS required; use mysql2 not Postgres; no python3 in env.

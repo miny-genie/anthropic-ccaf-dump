@@ -3,13 +3,25 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Exam practice API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: sources
+    description: Exam sources
+  - name: dashboard
+    description: Dashboard summary
+  - name: attempts
+    description: Exam attempts
+  - name: bookmarks
+    description: Question bookmarks
+  - name: wrongAnswers
+    description: Wrong-answer notebook
 paths:
   /healthz:
     get:
@@ -24,7 +36,353 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Log in or create a user by username
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/Error"
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Log out the current user
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ok"
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Get the currently logged-in user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /sources:
+    get:
+      operationId: listSources
+      tags: [sources]
+      summary: List exam sources with question counts
+      responses:
+        "200":
+          description: Sources
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Source"
+
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [dashboard]
+      summary: Dashboard summary for the current user
+      responses:
+        "200":
+          description: Dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /attempts:
+    get:
+      operationId: listAttempts
+      tags: [attempts]
+      summary: List the current user's attempts
+      responses:
+        "200":
+          description: Attempts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AttemptSummary"
+        "401":
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: startAttempt
+      tags: [attempts]
+      summary: Start a new attempt for a source
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartAttemptInput"
+      responses:
+        "201":
+          description: Created attempt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttemptDetail"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+  /attempts/{id}:
+    get:
+      operationId: getAttempt
+      tags: [attempts]
+      summary: Get an attempt's full state for taking or resuming
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Attempt detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttemptDetail"
+        "401":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+  /attempts/{id}/answer:
+    post:
+      operationId: saveAnswer
+      tags: [attempts]
+      summary: Save an answer for a question in an attempt
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnswerInput"
+      responses:
+        "200":
+          description: Answer saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnswerResult"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+  /attempts/{id}/submit:
+    post:
+      operationId: submitAttempt
+      tags: [attempts]
+      summary: Submit an attempt and compute the score
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Attempt result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttemptResult"
+        "401":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+  /attempts/{id}/result:
+    get:
+      operationId: getAttemptResult
+      tags: [attempts]
+      summary: Get a submitted attempt's result
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Attempt result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttemptResult"
+        "401":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /bookmarks:
+    get:
+      operationId: listBookmarks
+      tags: [bookmarks]
+      summary: List the current user's bookmarked questions
+      responses:
+        "200":
+          description: Bookmarks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Bookmark"
+        "401":
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: toggleBookmark
+      tags: [bookmarks]
+      summary: Toggle a bookmark for a question
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookmarkInput"
+      responses:
+        "200":
+          description: Toggle result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookmarkToggleResult"
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /wrong-answers:
+    get:
+      operationId: listWrongAnswers
+      tags: [wrongAnswers]
+      summary: List the current user's wrong-answer notebook
+      parameters:
+        - name: isRealTest
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: scenario
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: resolved
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Wrong answers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WrongAnswer"
+        "401":
+          $ref: "#/components/responses/Error"
+  /wrong-answers/scenarios:
+    get:
+      operationId: listWrongAnswerScenarios
+      tags: [wrongAnswers]
+      summary: List distinct scenarios present in the notebook
+      responses:
+        "200":
+          description: Scenarios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        "401":
+          $ref: "#/components/responses/Error"
+  /wrong-answers/review:
+    get:
+      operationId: getWrongAnswerReview
+      tags: [wrongAnswers]
+      summary: Get unresolved wrong answers as a review set
+      parameters:
+        - name: isRealTest
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: scenario
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Review questions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReviewQuestion"
+        "401":
+          $ref: "#/components/responses/Error"
+  /wrong-answers/{id}:
+    patch:
+      operationId: updateWrongAnswer
+      tags: [wrongAnswers]
+      summary: Update a wrong-answer note or resolved state
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WrongAnswerUpdate"
+      responses:
+        "200":
+          description: Updated wrong answer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WrongAnswer"
+        "401":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+
 components:
+  parameters:
+    IdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +391,389 @@ components:
           type: string
       required:
         - status
-
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+    Ok:
+      type: object
+      properties:
+        ok:
+          type: boolean
+      required:
+        - ok
+    LoginInput:
+      type: object
+      required: [username]
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 60
+    User:
+      type: object
+      required: [id, username, createdAt]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        createdAt:
+          type: string
+    Source:
+      type: object
+      required: [id, sourceKey, isRealTest, title, questionCount]
+      properties:
+        id:
+          type: integer
+        sourceKey:
+          type: string
+        isRealTest:
+          type: boolean
+        title:
+          type: string
+        questionCount:
+          type: integer
+    Option:
+      type: object
+      required: [label, text]
+      properties:
+        label:
+          type: string
+        text:
+          type: string
+    QuestionDetail:
+      type: object
+      required: [id, questionNo, questionText, options, flagged]
+      properties:
+        id:
+          type: integer
+        questionNo:
+          type: integer
+        scenario:
+          type: ["string", "null"]
+        questionText:
+          type: string
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/Option"
+        selectedOption:
+          type: ["string", "null"]
+        flagged:
+          type: boolean
+    StartAttemptInput:
+      type: object
+      required: [sourceId]
+      properties:
+        sourceId:
+          type: integer
+        timeLimitSeconds:
+          type: ["integer", "null"]
+    AttemptDetail:
+      type: object
+      required:
+        [
+          id,
+          sourceId,
+          isRealTest,
+          title,
+          startedAt,
+          timeLimitSeconds,
+          remainingSeconds,
+          questions,
+        ]
+      properties:
+        id:
+          type: integer
+        sourceId:
+          type: integer
+        isRealTest:
+          type: boolean
+        title:
+          type: string
+        startedAt:
+          type: string
+        submittedAt:
+          type: ["string", "null"]
+        timeLimitSeconds:
+          type: integer
+        remainingSeconds:
+          type: integer
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestionDetail"
+    AnswerInput:
+      type: object
+      required: [questionId]
+      properties:
+        questionId:
+          type: integer
+        selectedOption:
+          type: ["string", "null"]
+        flagged:
+          type: ["boolean", "null"]
+    AnswerResult:
+      type: object
+      required: [saved]
+      properties:
+        saved:
+          type: boolean
+        isCorrect:
+          type: ["boolean", "null"]
+        correctOption:
+          type: ["string", "null"]
+    ScenarioScore:
+      type: object
+      required: [scenario, correct, total, percent]
+      properties:
+        scenario:
+          type: string
+        correct:
+          type: integer
+        total:
+          type: integer
+        percent:
+          type: number
+    ResultWrongAnswer:
+      type: object
+      required: [questionId, questionText, options, correctOption]
+      properties:
+        questionId:
+          type: integer
+        scenario:
+          type: ["string", "null"]
+        questionText:
+          type: string
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/Option"
+        selectedOption:
+          type: ["string", "null"]
+        correctOption:
+          type: string
+    AttemptResult:
+      type: object
+      required:
+        [
+          id,
+          isRealTest,
+          title,
+          scoreRaw,
+          correctCount,
+          totalCount,
+          percent,
+          scenarioBreakdown,
+          wrongAnswers,
+        ]
+      properties:
+        id:
+          type: integer
+        isRealTest:
+          type: boolean
+        title:
+          type: string
+        submittedAt:
+          type: ["string", "null"]
+        scoreRaw:
+          type: integer
+        scoreScaled:
+          type: ["integer", "null"]
+        passed:
+          type: ["boolean", "null"]
+        correctCount:
+          type: integer
+        totalCount:
+          type: integer
+        percent:
+          type: number
+        scenarioBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScenarioScore"
+        wrongAnswers:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResultWrongAnswer"
+    AttemptSummary:
+      type: object
+      required: [id, sourceId, isRealTest, title, startedAt, totalCount]
+      properties:
+        id:
+          type: integer
+        sourceId:
+          type: integer
+        isRealTest:
+          type: boolean
+        title:
+          type: string
+        startedAt:
+          type: string
+        submittedAt:
+          type: ["string", "null"]
+        scoreScaled:
+          type: ["integer", "null"]
+        passed:
+          type: ["boolean", "null"]
+        correctCount:
+          type: ["integer", "null"]
+        totalCount:
+          type: integer
+        percent:
+          type: ["number", "null"]
+    MockupStats:
+      type: object
+      required: [attempts, avgPercent, bestPercent]
+      properties:
+        attempts:
+          type: integer
+        avgPercent:
+          type: number
+        bestPercent:
+          type: number
+    RealTestStat:
+      type: object
+      required: [attempts, passes, bestScaled]
+      properties:
+        attempts:
+          type: integer
+        passes:
+          type: integer
+        bestScaled:
+          type: integer
+    DashboardSummary:
+      type: object
+      required:
+        [
+          user,
+          recentAttempts,
+          mockupStats,
+          realTestStat,
+          wrongAnswerCount,
+          bookmarkCount,
+        ]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        recentAttempts:
+          type: array
+          items:
+            $ref: "#/components/schemas/AttemptSummary"
+        mockupStats:
+          $ref: "#/components/schemas/MockupStats"
+        realTestStat:
+          $ref: "#/components/schemas/RealTestStat"
+        wrongAnswerCount:
+          type: integer
+        bookmarkCount:
+          type: integer
+    Bookmark:
+      type: object
+      required: [id, questionId, questionText, isRealTest, createdAt]
+      properties:
+        id:
+          type: integer
+        questionId:
+          type: integer
+        scenario:
+          type: ["string", "null"]
+        questionText:
+          type: string
+        isRealTest:
+          type: boolean
+        createdAt:
+          type: string
+    BookmarkInput:
+      type: object
+      required: [questionId]
+      properties:
+        questionId:
+          type: integer
+    BookmarkToggleResult:
+      type: object
+      required: [bookmarked]
+      properties:
+        bookmarked:
+          type: boolean
+    WrongAnswer:
+      type: object
+      required:
+        [
+          id,
+          questionId,
+          isRealTest,
+          questionText,
+          options,
+          selectedOption,
+          correctOption,
+          createdAt,
+        ]
+      properties:
+        id:
+          type: integer
+        questionId:
+          type: integer
+        isRealTest:
+          type: boolean
+        scenario:
+          type: ["string", "null"]
+        questionText:
+          type: string
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/Option"
+        selectedOption:
+          type: ["string", "null"]
+        correctOption:
+          type: string
+        note:
+          type: ["string", "null"]
+        resolvedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+    WrongAnswerUpdate:
+      type: object
+      properties:
+        note:
+          type: ["string", "null"]
+        resolved:
+          type: ["boolean", "null"]
+    ReviewQuestion:
+      type: object
+      required:
+        [
+          wrongAnswerId,
+          questionId,
+          isRealTest,
+          questionText,
+          options,
+          correctOption,
+        ]
+      properties:
+        wrongAnswerId:
+          type: integer
+        questionId:
+          type: integer
+        isRealTest:
+          type: boolean
+        scenario:
+          type: ["string", "null"]
+        questionText:
+          type: string
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/Option"
+        correctOption:
+          type: string
+        previousSelected:
+          type: ["string", "null"]
+        note:
+          type: ["string", "null"]

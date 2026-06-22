@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Exam Practice"
+version = "1.0.0"
+id = "artifacts/exam-practice"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18429
+
+[services.development]
+run = "pnpm --filter @workspace/exam-practice run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/exam-practice", "run", "build" ]
+publicDir = "artifacts/exam-practice/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18429"
+BASE_PATH = "/"
