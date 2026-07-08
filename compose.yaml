@@ -1,0 +1,9 @@
+services:
+  web:
+    build: .
+    image: quiz-exam-builder:local
+    restart: unless-stopped
+    env_file:
+      - .env.hosting
+    ports:
+      - "8080:8080"

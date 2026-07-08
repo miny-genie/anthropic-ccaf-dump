@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import mysql, { type Pool } from "mysql2/promise";
 
 function sanitizeHost(raw: string | undefined): string {
@@ -5,6 +7,13 @@ function sanitizeHost(raw: string | undefined): string {
     .replace(/^https?:\/\//, "")
     .replace(/\/+$/, "")
     .trim();
+}
+
+function resolveCa(): string | undefined {
+  const caPath = process.env.TIDB_CA_PATH;
+  if (!caPath) return undefined;
+
+  return readFileSync(path.resolve(process.cwd(), caPath), "utf8");
 }
 
 let pool: Pool | null = null;
@@ -17,6 +26,7 @@ export function getPool(): Pool {
   const user = process.env.TIDB_USER;
   const password = process.env.TIDB_PASSWORD;
   const database = process.env.TIDB_DATABASE;
+  const ca = resolveCa();
 
   if (!host || !user || !database) {
     throw new Error(
@@ -33,7 +43,7 @@ export function getPool(): Pool {
     waitForConnections: true,
     connectionLimit: 8,
     enableKeepAlive: true,
-    ssl: { minVersion: "TLSv1.2", rejectUnauthorized: true },
+    ssl: { minVersion: "TLSv1.2", rejectUnauthorized: true, ca },
   });
 
   return pool;

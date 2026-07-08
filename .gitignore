@@ -31,6 +31,9 @@ node_modules
 /.sass-cache
 /connect.lock
 /coverage
+.env
+.env.*
+!.env.hosting.example
 /libpeerconnection.log
 npm-debug.log
 yarn-error.log

@@ -1,0 +1,14 @@
+.git
+.cache
+.local
+node_modules
+**/node_modules
+dist
+**/dist
+*.tsbuildinfo
+coverage
+.env
+.env.*
+!.env.hosting.example
+Quiz-Exam-Builder.zip
+
