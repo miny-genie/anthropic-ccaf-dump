@@ -14,6 +14,7 @@ import { getPool } from "../lib/db";
 import { requireAuth, type AuthedRequest } from "../lib/auth";
 import { getQuestionsByIds } from "../lib/examData";
 import { setNote } from "../lib/notes";
+import { normalizeLocale } from "../lib/locale";
 
 const router: IRouter = Router();
 
@@ -45,9 +46,9 @@ interface WaRow extends RowDataPacket {
   created_at: Date;
 }
 
-async function buildWrongAnswers(rows: WaRow[]) {
+async function buildWrongAnswers(rows: WaRow[], locale?: string | null) {
   const ids = rows.map((r) => r.question_id);
-  const questionMap = await getQuestionsByIds(ids);
+  const questionMap = await getQuestionsByIds(ids, locale);
   return rows.map((r) => {
     const q = questionMap.get(r.question_id);
     return {
@@ -68,6 +69,7 @@ async function buildWrongAnswers(rows: WaRow[]) {
 
 router.get("/wrong-answers", requireAuth, async (req, res) => {
   const userId = (req as AuthedRequest).userId;
+  const locale = normalizeLocale(req.query.locale);
   const params = ListWrongAnswersQueryParams.safeParse(
     normalizeBoolQuery(req.query as Record<string, unknown>, [
       "isRealTest",
@@ -88,7 +90,9 @@ router.get("/wrong-answers", requireAuth, async (req, res) => {
     args.push(isRealTest ? 1 : 0);
   }
   if (resolved !== undefined) {
-    where.push(resolved ? "wa.resolved_at IS NOT NULL" : "wa.resolved_at IS NULL");
+    where.push(
+      resolved ? "wa.resolved_at IS NOT NULL" : "wa.resolved_at IS NULL",
+    );
   }
   if (scenario !== undefined && scenario !== "") {
     where.push("q.scenario = ?");
@@ -107,19 +111,27 @@ router.get("/wrong-answers", requireAuth, async (req, res) => {
     args,
   );
 
-  res.json(ListWrongAnswersResponse.parse(await buildWrongAnswers(rows)));
+  res.json(
+    ListWrongAnswersResponse.parse(await buildWrongAnswers(rows, locale)),
+  );
 });
 
 router.get("/wrong-answers/scenarios", requireAuth, async (req, res) => {
   const userId = (req as AuthedRequest).userId;
+  const locale = normalizeLocale(req.query.locale);
+  const translated = locale === "ko" ? "ko" : null;
   const pool = getPool();
   const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT DISTINCT q.scenario
+    `SELECT DISTINCT COALESCE(qt.scenario, q.scenario) AS scenario
        FROM app_wrong_answers wa
        JOIN exam_questions q ON q.id = wa.question_id
-      WHERE wa.user_id = ? AND q.scenario IS NOT NULL AND q.scenario <> ''
-      ORDER BY q.scenario ASC`,
-    [userId],
+       LEFT JOIN exam_question_translations qt
+         ON qt.question_id = q.id AND qt.locale = ?
+      WHERE wa.user_id = ?
+        AND COALESCE(qt.scenario, q.scenario) IS NOT NULL
+        AND COALESCE(qt.scenario, q.scenario) <> ''
+      ORDER BY scenario ASC`,
+    [translated, userId],
   );
   const data = rows.map((r) => r.scenario as string);
   res.json(ListWrongAnswerScenariosResponse.parse(data));
@@ -127,6 +139,7 @@ router.get("/wrong-answers/scenarios", requireAuth, async (req, res) => {
 
 router.get("/wrong-answers/review", requireAuth, async (req, res) => {
   const userId = (req as AuthedRequest).userId;
+  const locale = normalizeLocale(req.query.locale);
   const params = GetWrongAnswerReviewQueryParams.safeParse(
     normalizeBoolQuery(req.query as Record<string, unknown>, ["isRealTest"]),
   );
@@ -161,7 +174,7 @@ router.get("/wrong-answers/review", requireAuth, async (req, res) => {
   );
 
   const ids = rows.map((r) => r.question_id);
-  const questionMap = await getQuestionsByIds(ids);
+  const questionMap = await getQuestionsByIds(ids, locale);
   const data = rows.map((r) => {
     const q = questionMap.get(r.question_id);
     return {
@@ -222,7 +235,10 @@ router.patch("/wrong-answers/:id", requireAuth, async (req, res) => {
     res.status(404).json({ error: "Wrong answer not found" });
     return;
   }
-  const [built] = await buildWrongAnswers(rows);
+  const [built] = await buildWrongAnswers(
+    rows,
+    normalizeLocale(req.query.locale),
+  );
   res.json(UpdateWrongAnswerResponse.parse(built));
 });
 

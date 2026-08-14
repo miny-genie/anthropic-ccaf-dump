@@ -68,6 +68,25 @@ const STATEMENTS = [
     UNIQUE KEY uniq_user_question_note (user_id, question_id),
     INDEX idx_notes_user (user_id)
   )`,
+  `CREATE TABLE IF NOT EXISTS exam_question_translations (
+    question_id BIGINT NOT NULL,
+    locale VARCHAR(16) NOT NULL,
+    scenario TEXT NULL,
+    question_text TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (question_id, locale),
+    INDEX idx_eqt_locale (locale)
+  )`,
+  `CREATE TABLE IF NOT EXISTS exam_option_translations (
+    option_id BIGINT NOT NULL,
+    locale VARCHAR(16) NOT NULL,
+    option_text TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (option_id, locale),
+    INDEX idx_eot_locale (locale)
+  )`,
 ];
 
 async function columnExists(table: string, column: string): Promise<boolean> {
@@ -131,7 +150,9 @@ async function runMigrations(): Promise<void> {
       `ALTER TABLE app_wrong_answers
          ADD UNIQUE KEY uniq_user_question_real (user_id, question_id, is_real_test)`,
     );
-    logger.info("Migration: app_wrong_answers unique key now includes is_real_test");
+    logger.info(
+      "Migration: app_wrong_answers unique key now includes is_real_test",
+    );
   }
 }
 

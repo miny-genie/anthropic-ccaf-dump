@@ -5,9 +5,11 @@
  * Exam practice API
  * OpenAPI spec version: 0.1.0
  */
+import type { LocaleParamParameter } from './localeParamParameter';
 
 export type ListWrongAnswersParams = {
 isRealTest?: boolean;
 scenario?: string;
 resolved?: boolean;
+locale?: LocaleParamParameter;
 };

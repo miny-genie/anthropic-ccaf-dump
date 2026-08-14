@@ -1,5 +1,6 @@
 import type { RowDataPacket } from "mysql2";
 import { getPool } from "./db";
+import { translationLocale } from "./locale";
 
 // The single source used by Practice Mode. Practice never shows a source picker.
 export const PRACTICE_SOURCE_KEY = "claude_cert_mock_exam_html";
@@ -40,21 +41,28 @@ export interface QuestionRow {
 
 export async function getQuestionsForSource(
   sourceId: number,
+  locale?: string | null,
 ): Promise<QuestionRow[]> {
   const pool = getPool();
+  const translated = translationLocale(locale);
   const [qRows] = await pool.query<RowDataPacket[]>(
-    `SELECT q.id, q.question_no, q.scenario, q.question_text, q.correct_option,
+    `SELECT q.id, q.question_no,
+            COALESCE(qt.scenario, q.scenario) AS scenario,
+            COALESCE(qt.question_text, q.question_text) AS question_text,
+            q.correct_option,
             q.source_id, s.is_real_test
        FROM exam_questions q
        JOIN exam_sources s ON s.id = q.source_id
+       LEFT JOIN exam_question_translations qt
+         ON qt.question_id = q.id AND qt.locale = ?
       WHERE q.source_id = ?
       ORDER BY q.question_no ASC`,
-    [sourceId],
+    [translated, sourceId],
   );
   if (qRows.length === 0) return [];
 
   const ids = qRows.map((r) => r.id as number);
-  const optionsByQ = await getOptionsForQuestions(ids);
+  const optionsByQ = await getOptionsForQuestions(ids, translated);
 
   return qRows.map((r) => ({
     id: r.id as number,
@@ -70,21 +78,29 @@ export async function getQuestionsForSource(
 
 export async function getQuestionsByIds(
   ids: number[],
+  locale?: string | null,
 ): Promise<Map<number, QuestionRow>> {
   const result = new Map<number, QuestionRow>();
   if (ids.length === 0) return result;
   const pool = getPool();
+  const translated = translationLocale(locale);
   const placeholders = ids.map(() => "?").join(",");
   const [qRows] = await pool.query<RowDataPacket[]>(
-    `SELECT q.id, q.question_no, q.scenario, q.question_text, q.correct_option,
+    `SELECT q.id, q.question_no,
+            COALESCE(qt.scenario, q.scenario) AS scenario,
+            COALESCE(qt.question_text, q.question_text) AS question_text,
+            q.correct_option,
             q.source_id, s.is_real_test
        FROM exam_questions q
        JOIN exam_sources s ON s.id = q.source_id
+       LEFT JOIN exam_question_translations qt
+         ON qt.question_id = q.id AND qt.locale = ?
       WHERE q.id IN (${placeholders})`,
-    ids,
+    [translated, ...ids],
   );
   const optionsByQ = await getOptionsForQuestions(
     qRows.map((r) => r.id as number),
+    translated,
   );
   for (const r of qRows) {
     result.set(r.id as number, {
@@ -103,17 +119,22 @@ export async function getQuestionsByIds(
 
 async function getOptionsForQuestions(
   ids: number[],
+  locale?: string | null,
 ): Promise<Map<number, OptionRow[]>> {
   const byQ = new Map<number, OptionRow[]>();
   if (ids.length === 0) return byQ;
   const pool = getPool();
+  const translated = translationLocale(locale);
   const placeholders = ids.map(() => "?").join(",");
   const [oRows] = await pool.query<RowDataPacket[]>(
-    `SELECT question_id, option_label, option_text
-       FROM exam_options
-      WHERE question_id IN (${placeholders})
-      ORDER BY option_label ASC`,
-    ids,
+    `SELECT o.question_id, o.option_label,
+            COALESCE(ot.option_text, o.option_text) AS option_text
+       FROM exam_options o
+       LEFT JOIN exam_option_translations ot
+         ON ot.option_id = o.id AND ot.locale = ?
+      WHERE o.question_id IN (${placeholders})
+      ORDER BY o.option_label ASC`,
+    [translated, ...ids],
   );
   for (const o of oRows) {
     const qid = o.question_id as number;

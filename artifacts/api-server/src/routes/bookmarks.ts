@@ -7,21 +7,28 @@ import {
 } from "@workspace/api-zod";
 import { getPool } from "../lib/db";
 import { requireAuth, type AuthedRequest } from "../lib/auth";
+import { normalizeLocale } from "../lib/locale";
 
 const router: IRouter = Router();
 
 router.get("/bookmarks", requireAuth, async (req, res) => {
   const userId = (req as AuthedRequest).userId;
+  const locale = normalizeLocale(req.query.locale);
   const pool = getPool();
+  const translationLocale = locale === "ko" ? "ko" : null;
   const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT b.id, b.question_id, b.created_at, q.scenario, q.question_text,
+    `SELECT b.id, b.question_id, b.created_at,
+            COALESCE(qt.scenario, q.scenario) AS scenario,
+            COALESCE(qt.question_text, q.question_text) AS question_text,
             s.is_real_test
        FROM app_bookmarks b
        JOIN exam_questions q ON q.id = b.question_id
        JOIN exam_sources s ON s.id = q.source_id
+       LEFT JOIN exam_question_translations qt
+         ON qt.question_id = q.id AND qt.locale = ?
       WHERE b.user_id = ?
       ORDER BY b.created_at DESC`,
-    [userId],
+    [translationLocale, userId],
   );
   const data = rows.map((r) => ({
     id: r.id as number,

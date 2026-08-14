@@ -136,6 +136,8 @@ paths:
       operationId: startAttempt
       tags: [attempts]
       summary: Start a new attempt for a source
+      parameters:
+        - $ref: "#/components/parameters/LocaleParam"
       requestBody:
         required: true
         content:
@@ -158,6 +160,8 @@ paths:
       operationId: getOrCreatePracticeAttempt
       tags: [attempts]
       summary: Get the user's single persistent practice attempt, creating it if needed
+      parameters:
+        - $ref: "#/components/parameters/LocaleParam"
       responses:
         "200":
           description: Practice attempt detail
@@ -174,6 +178,8 @@ paths:
       operationId: resetPracticeAttempt
       tags: [attempts]
       summary: Discard the active practice attempt and start a fresh one
+      parameters:
+        - $ref: "#/components/parameters/LocaleParam"
       responses:
         "200":
           description: New practice attempt detail
@@ -192,6 +198,7 @@ paths:
       summary: Get an attempt's full state for taking or resuming
       parameters:
         - $ref: "#/components/parameters/IdParam"
+        - $ref: "#/components/parameters/LocaleParam"
       responses:
         "200":
           description: Attempt detail
@@ -236,6 +243,7 @@ paths:
       summary: Submit an attempt and compute the score
       parameters:
         - $ref: "#/components/parameters/IdParam"
+        - $ref: "#/components/parameters/LocaleParam"
       responses:
         "200":
           description: Attempt result
@@ -254,6 +262,7 @@ paths:
       summary: Get a submitted attempt's result
       parameters:
         - $ref: "#/components/parameters/IdParam"
+        - $ref: "#/components/parameters/LocaleParam"
       responses:
         "200":
           description: Attempt result
@@ -321,6 +330,8 @@ paths:
       operationId: listBookmarks
       tags: [bookmarks]
       summary: List the current user's bookmarked questions
+      parameters:
+        - $ref: "#/components/parameters/LocaleParam"
       responses:
         "200":
           description: Bookmarks
@@ -373,6 +384,7 @@ paths:
           required: false
           schema:
             type: boolean
+        - $ref: "#/components/parameters/LocaleParam"
       responses:
         "200":
           description: Wrong answers
@@ -389,6 +401,8 @@ paths:
       operationId: listWrongAnswerScenarios
       tags: [wrongAnswers]
       summary: List distinct scenarios present in the notebook
+      parameters:
+        - $ref: "#/components/parameters/LocaleParam"
       responses:
         "200":
           description: Scenarios
@@ -416,6 +430,7 @@ paths:
           required: false
           schema:
             type: string
+        - $ref: "#/components/parameters/LocaleParam"
       responses:
         "200":
           description: Review questions
@@ -434,6 +449,7 @@ paths:
       summary: Update a wrong-answer note or resolved state
       parameters:
         - $ref: "#/components/parameters/IdParam"
+        - $ref: "#/components/parameters/LocaleParam"
       requestBody:
         required: true
         content:
@@ -460,6 +476,13 @@ components:
       required: true
       schema:
         type: integer
+    LocaleParam:
+      name: locale
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [en, ko]
   responses:
     Error:
       description: Error

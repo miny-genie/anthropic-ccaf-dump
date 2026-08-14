@@ -125,6 +125,10 @@ export const ListAttemptsResponse = zod.array(ListAttemptsResponseItem)
 /**
  * @summary Start a new attempt for a source
  */
+export const StartAttemptQueryParams = zod.object({
+  "locale": zod.enum(['en', 'ko']).optional()
+})
+
 export const StartAttemptBody = zod.object({
   "sourceId": zod.number(),
   "timeLimitSeconds": zod.number().nullish()
@@ -134,6 +138,10 @@ export const StartAttemptBody = zod.object({
 /**
  * @summary Get the user's single persistent practice attempt, creating it if needed
  */
+export const GetOrCreatePracticeAttemptQueryParams = zod.object({
+  "locale": zod.enum(['en', 'ko']).optional()
+})
+
 export const GetOrCreatePracticeAttemptResponse = zod.object({
   "id": zod.number(),
   "sourceId": zod.number(),
@@ -166,6 +174,10 @@ export const GetOrCreatePracticeAttemptResponse = zod.object({
 /**
  * @summary Discard the active practice attempt and start a fresh one
  */
+export const ResetPracticeAttemptQueryParams = zod.object({
+  "locale": zod.enum(['en', 'ko']).optional()
+})
+
 export const ResetPracticeAttemptResponse = zod.object({
   "id": zod.number(),
   "sourceId": zod.number(),
@@ -200,6 +212,10 @@ export const ResetPracticeAttemptResponse = zod.object({
  */
 export const GetAttemptParams = zod.object({
   "id": zod.coerce.number()
+})
+
+export const GetAttemptQueryParams = zod.object({
+  "locale": zod.enum(['en', 'ko']).optional()
 })
 
 export const GetAttemptResponse = zod.object({
@@ -258,6 +274,10 @@ export const SubmitAttemptParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const SubmitAttemptQueryParams = zod.object({
+  "locale": zod.enum(['en', 'ko']).optional()
+})
+
 export const SubmitAttemptResponse = zod.object({
   "id": zod.number(),
   "isRealTest": zod.boolean(),
@@ -294,6 +314,10 @@ export const SubmitAttemptResponse = zod.object({
  */
 export const GetAttemptResultParams = zod.object({
   "id": zod.coerce.number()
+})
+
+export const GetAttemptResultQueryParams = zod.object({
+  "locale": zod.enum(['en', 'ko']).optional()
 })
 
 export const GetAttemptResultResponse = zod.object({
@@ -360,6 +384,10 @@ export const SetNoteResponse = zod.object({
 /**
  * @summary List the current user's bookmarked questions
  */
+export const ListBookmarksQueryParams = zod.object({
+  "locale": zod.enum(['en', 'ko']).optional()
+})
+
 export const ListBookmarksResponseItem = zod.object({
   "id": zod.number(),
   "questionId": zod.number(),
@@ -389,7 +417,8 @@ export const ToggleBookmarkResponse = zod.object({
 export const ListWrongAnswersQueryParams = zod.object({
   "isRealTest": zod.coerce.boolean().optional(),
   "scenario": zod.coerce.string().optional(),
-  "resolved": zod.coerce.boolean().optional()
+  "resolved": zod.coerce.boolean().optional(),
+  "locale": zod.enum(['en', 'ko']).optional()
 })
 
 export const ListWrongAnswersResponseItem = zod.object({
@@ -414,6 +443,10 @@ export const ListWrongAnswersResponse = zod.array(ListWrongAnswersResponseItem)
 /**
  * @summary List distinct scenarios present in the notebook
  */
+export const ListWrongAnswerScenariosQueryParams = zod.object({
+  "locale": zod.enum(['en', 'ko']).optional()
+})
+
 export const ListWrongAnswerScenariosResponseItem = zod.string()
 export const ListWrongAnswerScenariosResponse = zod.array(ListWrongAnswerScenariosResponseItem)
 
@@ -423,7 +456,8 @@ export const ListWrongAnswerScenariosResponse = zod.array(ListWrongAnswerScenari
  */
 export const GetWrongAnswerReviewQueryParams = zod.object({
   "isRealTest": zod.coerce.boolean().optional(),
-  "scenario": zod.coerce.string().optional()
+  "scenario": zod.coerce.string().optional(),
+  "locale": zod.enum(['en', 'ko']).optional()
 })
 
 export const GetWrongAnswerReviewResponseItem = zod.object({
@@ -448,6 +482,10 @@ export const GetWrongAnswerReviewResponse = zod.array(GetWrongAnswerReviewRespon
  */
 export const UpdateWrongAnswerParams = zod.object({
   "id": zod.coerce.number()
+})
+
+export const UpdateWrongAnswerQueryParams = zod.object({
+  "locale": zod.enum(['en', 'ko']).optional()
 })
 
 export const UpdateWrongAnswerBody = zod.object({

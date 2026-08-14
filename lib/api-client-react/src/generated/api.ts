@@ -30,17 +30,26 @@ import type {
   BookmarkToggleResult,
   DashboardSummary,
   ErrorResponse,
+  GetAttemptParams,
+  GetAttemptResultParams,
+  GetOrCreatePracticeAttemptParams,
   GetWrongAnswerReviewParams,
   HealthStatus,
+  ListBookmarksParams,
+  ListWrongAnswerScenariosParams,
   ListWrongAnswersParams,
   LoginInput,
   NoteInput,
   NoteResult,
   Ok,
   ProgressInput,
+  ResetPracticeAttemptParams,
   ReviewQuestion,
   Source,
   StartAttemptInput,
+  StartAttemptParams,
+  SubmitAttemptParams,
+  UpdateWrongAnswerParams,
   User,
   WrongAnswer,
   WrongAnswerUpdate
@@ -585,20 +594,28 @@ export function useListAttempts<TData = Awaited<ReturnType<typeof listAttempts>>
 
 
 
-export const getStartAttemptUrl = () => {
+export const getStartAttemptUrl = (params?: StartAttemptParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/attempts`
+  return stringifiedParams.length > 0 ? `/api/attempts?${stringifiedParams}` : `/api/attempts`
 }
 
 /**
  * @summary Start a new attempt for a source
  */
-export const startAttempt = async (startAttemptInput: StartAttemptInput, options?: RequestInit): Promise<AttemptDetail> => {
+export const startAttempt = async (startAttemptInput: StartAttemptInput,
+    params?: StartAttemptParams, options?: RequestInit): Promise<AttemptDetail> => {
 
-  return customFetch<AttemptDetail>(getStartAttemptUrl(),
+  return customFetch<AttemptDetail>(getStartAttemptUrl(params),
   {
     ...options,
     method: 'POST',
@@ -612,8 +629,8 @@ export const startAttempt = async (startAttemptInput: StartAttemptInput, options
 
 
 export const getStartAttemptMutationOptions = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startAttempt>>, TError,{data: BodyType<StartAttemptInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof startAttempt>>, TError,{data: BodyType<StartAttemptInput>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startAttempt>>, TError,{data: BodyType<StartAttemptInput>;params?: StartAttemptParams}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startAttempt>>, TError,{data: BodyType<StartAttemptInput>;params?: StartAttemptParams}, TContext> => {
 
 const mutationKey = ['startAttempt'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -625,10 +642,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startAttempt>>, {data: BodyType<StartAttemptInput>}> = (props) => {
-          const {data} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startAttempt>>, {data: BodyType<StartAttemptInput>;params?: StartAttemptParams}> = (props) => {
+          const {data,params} = props ?? {};
 
-          return  startAttempt(data,requestOptions)
+          return  startAttempt(data,params,requestOptions)
         }
 
 
@@ -646,30 +663,37 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
  * @summary Start a new attempt for a source
  */
 export const useStartAttempt = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startAttempt>>, TError,{data: BodyType<StartAttemptInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startAttempt>>, TError,{data: BodyType<StartAttemptInput>;params?: StartAttemptParams}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof startAttempt>>,
         TError,
-        {data: BodyType<StartAttemptInput>},
+        {data: BodyType<StartAttemptInput>;params?: StartAttemptParams},
         TContext
       > => {
       return useMutation(getStartAttemptMutationOptions(options));
     }
 
-export const getGetOrCreatePracticeAttemptUrl = () => {
+export const getGetOrCreatePracticeAttemptUrl = (params?: GetOrCreatePracticeAttemptParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/attempts/practice`
+  return stringifiedParams.length > 0 ? `/api/attempts/practice?${stringifiedParams}` : `/api/attempts/practice`
 }
 
 /**
  * @summary Get the user's single persistent practice attempt, creating it if needed
  */
-export const getOrCreatePracticeAttempt = async ( options?: RequestInit): Promise<AttemptDetail> => {
+export const getOrCreatePracticeAttempt = async (params?: GetOrCreatePracticeAttemptParams, options?: RequestInit): Promise<AttemptDetail> => {
 
-  return customFetch<AttemptDetail>(getGetOrCreatePracticeAttemptUrl(),
+  return customFetch<AttemptDetail>(getGetOrCreatePracticeAttemptUrl(params),
   {
     ...options,
     method: 'POST'
@@ -682,8 +706,8 @@ export const getOrCreatePracticeAttempt = async ( options?: RequestInit): Promis
 
 
 export const getGetOrCreatePracticeAttemptMutationOptions = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getOrCreatePracticeAttempt>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof getOrCreatePracticeAttempt>>, TError,void, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getOrCreatePracticeAttempt>>, TError,{params?: GetOrCreatePracticeAttemptParams}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof getOrCreatePracticeAttempt>>, TError,{params?: GetOrCreatePracticeAttemptParams}, TContext> => {
 
 const mutationKey = ['getOrCreatePracticeAttempt'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -695,10 +719,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof getOrCreatePracticeAttempt>>, void> = () => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof getOrCreatePracticeAttempt>>, {params?: GetOrCreatePracticeAttemptParams}> = (props) => {
+          const {params} = props ?? {};
 
-
-          return  getOrCreatePracticeAttempt(requestOptions)
+          return  getOrCreatePracticeAttempt(params,requestOptions)
         }
 
 
@@ -716,30 +740,37 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
  * @summary Get the user's single persistent practice attempt, creating it if needed
  */
 export const useGetOrCreatePracticeAttempt = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getOrCreatePracticeAttempt>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getOrCreatePracticeAttempt>>, TError,{params?: GetOrCreatePracticeAttemptParams}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof getOrCreatePracticeAttempt>>,
         TError,
-        void,
+        {params?: GetOrCreatePracticeAttemptParams},
         TContext
       > => {
       return useMutation(getGetOrCreatePracticeAttemptMutationOptions(options));
     }
 
-export const getResetPracticeAttemptUrl = () => {
+export const getResetPracticeAttemptUrl = (params?: ResetPracticeAttemptParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/attempts/practice/reset`
+  return stringifiedParams.length > 0 ? `/api/attempts/practice/reset?${stringifiedParams}` : `/api/attempts/practice/reset`
 }
 
 /**
  * @summary Discard the active practice attempt and start a fresh one
  */
-export const resetPracticeAttempt = async ( options?: RequestInit): Promise<AttemptDetail> => {
+export const resetPracticeAttempt = async (params?: ResetPracticeAttemptParams, options?: RequestInit): Promise<AttemptDetail> => {
 
-  return customFetch<AttemptDetail>(getResetPracticeAttemptUrl(),
+  return customFetch<AttemptDetail>(getResetPracticeAttemptUrl(params),
   {
     ...options,
     method: 'POST'
@@ -752,8 +783,8 @@ export const resetPracticeAttempt = async ( options?: RequestInit): Promise<Atte
 
 
 export const getResetPracticeAttemptMutationOptions = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetPracticeAttempt>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof resetPracticeAttempt>>, TError,void, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetPracticeAttempt>>, TError,{params?: ResetPracticeAttemptParams}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resetPracticeAttempt>>, TError,{params?: ResetPracticeAttemptParams}, TContext> => {
 
 const mutationKey = ['resetPracticeAttempt'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -765,10 +796,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resetPracticeAttempt>>, void> = () => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resetPracticeAttempt>>, {params?: ResetPracticeAttemptParams}> = (props) => {
+          const {params} = props ?? {};
 
-
-          return  resetPracticeAttempt(requestOptions)
+          return  resetPracticeAttempt(params,requestOptions)
         }
 
 
@@ -786,30 +817,39 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
  * @summary Discard the active practice attempt and start a fresh one
  */
 export const useResetPracticeAttempt = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetPracticeAttempt>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetPracticeAttempt>>, TError,{params?: ResetPracticeAttemptParams}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof resetPracticeAttempt>>,
         TError,
-        void,
+        {params?: ResetPracticeAttemptParams},
         TContext
       > => {
       return useMutation(getResetPracticeAttemptMutationOptions(options));
     }
 
-export const getGetAttemptUrl = (id: number,) => {
+export const getGetAttemptUrl = (id: number,
+    params?: GetAttemptParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/attempts/${id}`
+  return stringifiedParams.length > 0 ? `/api/attempts/${id}?${stringifiedParams}` : `/api/attempts/${id}`
 }
 
 /**
  * @summary Get an attempt's full state for taking or resuming
  */
-export const getAttempt = async (id: number, options?: RequestInit): Promise<AttemptDetail> => {
+export const getAttempt = async (id: number,
+    params?: GetAttemptParams, options?: RequestInit): Promise<AttemptDetail> => {
 
-  return customFetch<AttemptDetail>(getGetAttemptUrl(id),
+  return customFetch<AttemptDetail>(getGetAttemptUrl(id,params),
   {
     ...options,
     method: 'GET'
@@ -822,23 +862,25 @@ export const getAttempt = async (id: number, options?: RequestInit): Promise<Att
 
 
 
-export const getGetAttemptQueryKey = (id: number,) => {
+export const getGetAttemptQueryKey = (id: number,
+    params?: GetAttemptParams,) => {
     return [
-    `/api/attempts/${id}`
+    `/api/attempts/${id}`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetAttemptQueryOptions = <TData = Awaited<ReturnType<typeof getAttempt>>, TError = ErrorType<ErrorResponse>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAttempt>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetAttemptQueryOptions = <TData = Awaited<ReturnType<typeof getAttempt>>, TError = ErrorType<ErrorResponse>>(id: number,
+    params?: GetAttemptParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAttempt>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetAttemptQueryKey(id);
+  const queryKey =  queryOptions?.queryKey ?? getGetAttemptQueryKey(id,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAttempt>>> = ({ signal }) => getAttempt(id, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAttempt>>> = ({ signal }) => getAttempt(id,params, { signal, ...requestOptions });
 
 
 
@@ -856,11 +898,12 @@ export type GetAttemptQueryError = ErrorType<ErrorResponse>
  */
 
 export function useGetAttempt<TData = Awaited<ReturnType<typeof getAttempt>>, TError = ErrorType<ErrorResponse>>(
- id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAttempt>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ id: number,
+    params?: GetAttemptParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAttempt>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetAttemptQueryOptions(id,options)
+  const queryOptions = getGetAttemptQueryOptions(id,params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -945,20 +988,29 @@ export const useSaveAnswer = <TError = ErrorType<ErrorResponse>,
       return useMutation(getSaveAnswerMutationOptions(options));
     }
 
-export const getSubmitAttemptUrl = (id: number,) => {
+export const getSubmitAttemptUrl = (id: number,
+    params?: SubmitAttemptParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/attempts/${id}/submit`
+  return stringifiedParams.length > 0 ? `/api/attempts/${id}/submit?${stringifiedParams}` : `/api/attempts/${id}/submit`
 }
 
 /**
  * @summary Submit an attempt and compute the score
  */
-export const submitAttempt = async (id: number, options?: RequestInit): Promise<AttemptResult> => {
+export const submitAttempt = async (id: number,
+    params?: SubmitAttemptParams, options?: RequestInit): Promise<AttemptResult> => {
 
-  return customFetch<AttemptResult>(getSubmitAttemptUrl(id),
+  return customFetch<AttemptResult>(getSubmitAttemptUrl(id,params),
   {
     ...options,
     method: 'POST'
@@ -971,8 +1023,8 @@ export const submitAttempt = async (id: number, options?: RequestInit): Promise<
 
 
 export const getSubmitAttemptMutationOptions = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitAttempt>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof submitAttempt>>, TError,{id: number}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitAttempt>>, TError,{id: number;params?: SubmitAttemptParams}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitAttempt>>, TError,{id: number;params?: SubmitAttemptParams}, TContext> => {
 
 const mutationKey = ['submitAttempt'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -984,10 +1036,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitAttempt>>, {id: number}> = (props) => {
-          const {id} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitAttempt>>, {id: number;params?: SubmitAttemptParams}> = (props) => {
+          const {id,params} = props ?? {};
 
-          return  submitAttempt(id,requestOptions)
+          return  submitAttempt(id,params,requestOptions)
         }
 
 
@@ -1005,30 +1057,39 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
  * @summary Submit an attempt and compute the score
  */
 export const useSubmitAttempt = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitAttempt>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitAttempt>>, TError,{id: number;params?: SubmitAttemptParams}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof submitAttempt>>,
         TError,
-        {id: number},
+        {id: number;params?: SubmitAttemptParams},
         TContext
       > => {
       return useMutation(getSubmitAttemptMutationOptions(options));
     }
 
-export const getGetAttemptResultUrl = (id: number,) => {
+export const getGetAttemptResultUrl = (id: number,
+    params?: GetAttemptResultParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/attempts/${id}/result`
+  return stringifiedParams.length > 0 ? `/api/attempts/${id}/result?${stringifiedParams}` : `/api/attempts/${id}/result`
 }
 
 /**
  * @summary Get a submitted attempt's result
  */
-export const getAttemptResult = async (id: number, options?: RequestInit): Promise<AttemptResult> => {
+export const getAttemptResult = async (id: number,
+    params?: GetAttemptResultParams, options?: RequestInit): Promise<AttemptResult> => {
 
-  return customFetch<AttemptResult>(getGetAttemptResultUrl(id),
+  return customFetch<AttemptResult>(getGetAttemptResultUrl(id,params),
   {
     ...options,
     method: 'GET'
@@ -1041,23 +1102,25 @@ export const getAttemptResult = async (id: number, options?: RequestInit): Promi
 
 
 
-export const getGetAttemptResultQueryKey = (id: number,) => {
+export const getGetAttemptResultQueryKey = (id: number,
+    params?: GetAttemptResultParams,) => {
     return [
-    `/api/attempts/${id}/result`
+    `/api/attempts/${id}/result`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetAttemptResultQueryOptions = <TData = Awaited<ReturnType<typeof getAttemptResult>>, TError = ErrorType<ErrorResponse>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAttemptResult>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetAttemptResultQueryOptions = <TData = Awaited<ReturnType<typeof getAttemptResult>>, TError = ErrorType<ErrorResponse>>(id: number,
+    params?: GetAttemptResultParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAttemptResult>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetAttemptResultQueryKey(id);
+  const queryKey =  queryOptions?.queryKey ?? getGetAttemptResultQueryKey(id,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAttemptResult>>> = ({ signal }) => getAttemptResult(id, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAttemptResult>>> = ({ signal }) => getAttemptResult(id,params, { signal, ...requestOptions });
 
 
 
@@ -1075,11 +1138,12 @@ export type GetAttemptResultQueryError = ErrorType<ErrorResponse>
  */
 
 export function useGetAttemptResult<TData = Awaited<ReturnType<typeof getAttemptResult>>, TError = ErrorType<ErrorResponse>>(
- id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAttemptResult>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ id: number,
+    params?: GetAttemptResultParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAttemptResult>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetAttemptResultQueryOptions(id,options)
+  const queryOptions = getGetAttemptResultQueryOptions(id,params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -1235,20 +1299,27 @@ export const useSetNote = <TError = ErrorType<ErrorResponse>,
       return useMutation(getSetNoteMutationOptions(options));
     }
 
-export const getListBookmarksUrl = () => {
+export const getListBookmarksUrl = (params?: ListBookmarksParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/bookmarks`
+  return stringifiedParams.length > 0 ? `/api/bookmarks?${stringifiedParams}` : `/api/bookmarks`
 }
 
 /**
  * @summary List the current user's bookmarked questions
  */
-export const listBookmarks = async ( options?: RequestInit): Promise<Bookmark[]> => {
+export const listBookmarks = async (params?: ListBookmarksParams, options?: RequestInit): Promise<Bookmark[]> => {
 
-  return customFetch<Bookmark[]>(getListBookmarksUrl(),
+  return customFetch<Bookmark[]>(getListBookmarksUrl(params),
   {
     ...options,
     method: 'GET'
@@ -1261,23 +1332,23 @@ export const listBookmarks = async ( options?: RequestInit): Promise<Bookmark[]>
 
 
 
-export const getListBookmarksQueryKey = () => {
+export const getListBookmarksQueryKey = (params?: ListBookmarksParams,) => {
     return [
-    `/api/bookmarks`
+    `/api/bookmarks`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListBookmarksQueryOptions = <TData = Awaited<ReturnType<typeof listBookmarks>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBookmarks>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListBookmarksQueryOptions = <TData = Awaited<ReturnType<typeof listBookmarks>>, TError = ErrorType<ErrorResponse>>(params?: ListBookmarksParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBookmarks>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListBookmarksQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListBookmarksQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBookmarks>>> = ({ signal }) => listBookmarks({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBookmarks>>> = ({ signal }) => listBookmarks(params, { signal, ...requestOptions });
 
 
 
@@ -1295,11 +1366,11 @@ export type ListBookmarksQueryError = ErrorType<ErrorResponse>
  */
 
 export function useListBookmarks<TData = Awaited<ReturnType<typeof listBookmarks>>, TError = ErrorType<ErrorResponse>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBookmarks>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListBookmarksParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBookmarks>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListBookmarksQueryOptions(options)
+  const queryOptions = getListBookmarksQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -1467,20 +1538,27 @@ export function useListWrongAnswers<TData = Awaited<ReturnType<typeof listWrongA
 
 
 
-export const getListWrongAnswerScenariosUrl = () => {
+export const getListWrongAnswerScenariosUrl = (params?: ListWrongAnswerScenariosParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/wrong-answers/scenarios`
+  return stringifiedParams.length > 0 ? `/api/wrong-answers/scenarios?${stringifiedParams}` : `/api/wrong-answers/scenarios`
 }
 
 /**
  * @summary List distinct scenarios present in the notebook
  */
-export const listWrongAnswerScenarios = async ( options?: RequestInit): Promise<string[]> => {
+export const listWrongAnswerScenarios = async (params?: ListWrongAnswerScenariosParams, options?: RequestInit): Promise<string[]> => {
 
-  return customFetch<string[]>(getListWrongAnswerScenariosUrl(),
+  return customFetch<string[]>(getListWrongAnswerScenariosUrl(params),
   {
     ...options,
     method: 'GET'
@@ -1493,23 +1571,23 @@ export const listWrongAnswerScenarios = async ( options?: RequestInit): Promise<
 
 
 
-export const getListWrongAnswerScenariosQueryKey = () => {
+export const getListWrongAnswerScenariosQueryKey = (params?: ListWrongAnswerScenariosParams,) => {
     return [
-    `/api/wrong-answers/scenarios`
+    `/api/wrong-answers/scenarios`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListWrongAnswerScenariosQueryOptions = <TData = Awaited<ReturnType<typeof listWrongAnswerScenarios>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWrongAnswerScenarios>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListWrongAnswerScenariosQueryOptions = <TData = Awaited<ReturnType<typeof listWrongAnswerScenarios>>, TError = ErrorType<ErrorResponse>>(params?: ListWrongAnswerScenariosParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWrongAnswerScenarios>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListWrongAnswerScenariosQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListWrongAnswerScenariosQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWrongAnswerScenarios>>> = ({ signal }) => listWrongAnswerScenarios({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWrongAnswerScenarios>>> = ({ signal }) => listWrongAnswerScenarios(params, { signal, ...requestOptions });
 
 
 
@@ -1527,11 +1605,11 @@ export type ListWrongAnswerScenariosQueryError = ErrorType<ErrorResponse>
  */
 
 export function useListWrongAnswerScenarios<TData = Awaited<ReturnType<typeof listWrongAnswerScenarios>>, TError = ErrorType<ErrorResponse>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWrongAnswerScenarios>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListWrongAnswerScenariosParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWrongAnswerScenarios>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListWrongAnswerScenariosQueryOptions(options)
+  const queryOptions = getListWrongAnswerScenariosQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -1628,21 +1706,30 @@ export function useGetWrongAnswerReview<TData = Awaited<ReturnType<typeof getWro
 
 
 
-export const getUpdateWrongAnswerUrl = (id: number,) => {
+export const getUpdateWrongAnswerUrl = (id: number,
+    params?: UpdateWrongAnswerParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/wrong-answers/${id}`
+  return stringifiedParams.length > 0 ? `/api/wrong-answers/${id}?${stringifiedParams}` : `/api/wrong-answers/${id}`
 }
 
 /**
  * @summary Update a wrong-answer note or resolved state
  */
 export const updateWrongAnswer = async (id: number,
-    wrongAnswerUpdate: WrongAnswerUpdate, options?: RequestInit): Promise<WrongAnswer> => {
+    wrongAnswerUpdate: WrongAnswerUpdate,
+    params?: UpdateWrongAnswerParams, options?: RequestInit): Promise<WrongAnswer> => {
 
-  return customFetch<WrongAnswer>(getUpdateWrongAnswerUrl(id),
+  return customFetch<WrongAnswer>(getUpdateWrongAnswerUrl(id,params),
   {
     ...options,
     method: 'PATCH',
@@ -1656,8 +1743,8 @@ export const updateWrongAnswer = async (id: number,
 
 
 export const getUpdateWrongAnswerMutationOptions = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWrongAnswer>>, TError,{id: number;data: BodyType<WrongAnswerUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof updateWrongAnswer>>, TError,{id: number;data: BodyType<WrongAnswerUpdate>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWrongAnswer>>, TError,{id: number;data: BodyType<WrongAnswerUpdate>;params?: UpdateWrongAnswerParams}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateWrongAnswer>>, TError,{id: number;data: BodyType<WrongAnswerUpdate>;params?: UpdateWrongAnswerParams}, TContext> => {
 
 const mutationKey = ['updateWrongAnswer'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -1669,10 +1756,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateWrongAnswer>>, {id: number;data: BodyType<WrongAnswerUpdate>}> = (props) => {
-          const {id,data} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateWrongAnswer>>, {id: number;data: BodyType<WrongAnswerUpdate>;params?: UpdateWrongAnswerParams}> = (props) => {
+          const {id,data,params} = props ?? {};
 
-          return  updateWrongAnswer(id,data,requestOptions)
+          return  updateWrongAnswer(id,data,params,requestOptions)
         }
 
 
@@ -1690,11 +1777,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
  * @summary Update a wrong-answer note or resolved state
  */
 export const useUpdateWrongAnswer = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWrongAnswer>>, TError,{id: number;data: BodyType<WrongAnswerUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWrongAnswer>>, TError,{id: number;data: BodyType<WrongAnswerUpdate>;params?: UpdateWrongAnswerParams}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof updateWrongAnswer>>,
         TError,
-        {id: number;data: BodyType<WrongAnswerUpdate>},
+        {id: number;data: BodyType<WrongAnswerUpdate>;params?: UpdateWrongAnswerParams},
         TContext
       > => {
       return useMutation(getUpdateWrongAnswerMutationOptions(options));

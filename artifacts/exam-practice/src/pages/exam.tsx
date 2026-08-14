@@ -36,28 +36,39 @@ import {
   LogOut,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { LocaleToggle } from "@/components/locale-toggle";
+import { useLocale } from "@/lib/locale";
 
 export default function Exam() {
   const { id } = useParams<{ id: string }>();
   const attemptId = parseInt(id || "0", 10);
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const [locale] = useLocale();
+  const attemptParams = { locale };
+  const attemptKey = getGetAttemptQueryKey(attemptId, attemptParams);
 
-  const { data: attempt, isLoading } = useGetAttempt(attemptId, {
-    query: {
-      enabled: !!attemptId,
-      queryKey: getGetAttemptQueryKey(attemptId),
-      // The attempt is owned by optimistic setQueryData writes (answer / clear /
-      // flag / bookmark / note). A background refetch returns pre-mutation server
-      // state and silently clobbers those writes — e.g. re-showing practice
-      // feedback right after re-clicking cleared it. staleTime: Infinity makes any
-      // refetch serve the cache instead of the network, so optimistic state
-      // sticks. Fresh server state is loaded on hard reload (empty cache); this is
-      // scoped to this query so other pages (dashboard, notebook, history) keep
-      // default on-mount freshness.
-      staleTime: Infinity,
+  const { data: attempt, isLoading } = useGetAttempt(
+    attemptId,
+    {
+      locale,
     },
-  });
+    {
+      query: {
+        enabled: !!attemptId,
+        queryKey: attemptKey,
+        // The attempt is owned by optimistic setQueryData writes (answer / clear /
+        // flag / bookmark / note). A background refetch returns pre-mutation server
+        // state and silently clobbers those writes — e.g. re-showing practice
+        // feedback right after re-clicking cleared it. staleTime: Infinity makes any
+        // refetch serve the cache instead of the network, so optimistic state
+        // sticks. Fresh server state is loaded on hard reload (empty cache); this is
+        // scoped to this query so other pages (dashboard, notebook, history) keep
+        // default on-mount freshness.
+        staleTime: Infinity,
+      },
+    },
+  );
 
   const saveAnswerMutation = useSaveAnswer();
   const submitMutation = useSubmitAttempt();
@@ -70,8 +81,6 @@ export default function Exam() {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
   const initializedRef = useRef(false);
-
-  const attemptKey = getGetAttemptQueryKey(attemptId);
 
   // Restore the saved cursor position once, when the attempt first loads.
   useEffect(() => {
@@ -112,7 +121,7 @@ export default function Exam() {
         if (prev <= 1) {
           clearInterval(timer);
           submitMutation.mutate(
-            { id: attemptId },
+            { id: attemptId, params: { locale } },
             { onSuccess: (result) => setLocation(`/result/${result.id}`) },
           );
           return 0;
@@ -122,7 +131,13 @@ export default function Exam() {
     }, 1000);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeLeft, isPending]);
+  }, [timeLeft, isPending, locale]);
+
+  useEffect(() => {
+    if (attempt?.submittedAt) {
+      setLocation(`/result/${attempt.id}`);
+    }
+  }, [attempt?.submittedAt, attempt?.id, setLocation]);
 
   if (isLoading || !attempt) {
     return (
@@ -133,7 +148,6 @@ export default function Exam() {
   }
 
   if (attempt.submittedAt) {
-    setLocation(`/result/${attempt.id}`);
     return null;
   }
 
@@ -199,9 +213,9 @@ export default function Exam() {
         onSuccess: (result) => {
           patchQuestion(currentQuestion.id, {
             selectedOption: nextValue,
-            isCorrect: nextValue === null ? null : result.isCorrect ?? null,
+            isCorrect: nextValue === null ? null : (result.isCorrect ?? null),
             correctOption:
-              nextValue === null ? null : result.correctOption ?? null,
+              nextValue === null ? null : (result.correctOption ?? null),
           });
         },
       },
@@ -210,18 +224,24 @@ export default function Exam() {
 
   const handleResetPractice = () => {
     if (resetMutation.isPending) return;
-    resetMutation.mutate(undefined, {
-      onSuccess: (fresh) => {
-        // Seed the cache so the new attempt renders immediately, then reset
-        // local cursor/note state and navigate to the fresh attempt.
-        queryClient.setQueryData(getGetAttemptQueryKey(fresh.id), fresh);
-        initializedRef.current = false;
-        setCurrentIndex(0);
-        setTimeLeft(null);
-        setNoteDraft("");
-        setLocation(`/exam/${fresh.id}`);
+    resetMutation.mutate(
+      { params: { locale } },
+      {
+        onSuccess: (fresh) => {
+          // Seed the cache so the new attempt renders immediately, then reset
+          // local cursor/note state and navigate to the fresh attempt.
+          queryClient.setQueryData(
+            getGetAttemptQueryKey(fresh.id, { locale }),
+            fresh,
+          );
+          initializedRef.current = false;
+          setCurrentIndex(0);
+          setTimeLeft(null);
+          setNoteDraft("");
+          setLocation(`/exam/${fresh.id}`);
+        },
       },
-    });
+    );
   };
 
   const handleToggleFlag = () => {
@@ -258,7 +278,7 @@ export default function Exam() {
   const handleSubmit = () => {
     if (submitMutation.isPending) return;
     submitMutation.mutate(
-      { id: attemptId },
+      { id: attemptId, params: { locale } },
       { onSuccess: (result) => setLocation(`/result/${result.id}`) },
     );
   };
@@ -297,6 +317,7 @@ export default function Exam() {
                 {formatTime(timeLeft)}
               </div>
             )}
+            <LocaleToggle />
             {isReal ? (
               <Button
                 variant="default"

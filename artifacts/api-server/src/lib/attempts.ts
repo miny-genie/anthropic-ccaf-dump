@@ -157,9 +157,16 @@ export interface ScoredResult {
 }
 
 export async function computeScore(attempt: AttemptRow): Promise<ScoredResult> {
+  return computeScoreForLocale(attempt, null);
+}
+
+export async function computeScoreForLocale(
+  attempt: AttemptRow,
+  locale?: string | null,
+): Promise<ScoredResult> {
   const order = await getAttemptQuestionOrder(attempt.id);
   const answers = await loadSavedAnswers(attempt.id);
-  const questionMap = await getQuestionsByIds(order);
+  const questionMap = await getQuestionsByIds(order, locale);
   const questions = order
     .map((id) => questionMap.get(id))
     .filter((q): q is QuestionRow => Boolean(q));
@@ -283,7 +290,7 @@ export async function createAttempt(
   isReal: boolean,
 ): Promise<number> {
   const pool = getPool();
-  const sourceQuestions = await getQuestionsForSource(sourceId);
+  const sourceQuestions = await getQuestionsForSource(sourceId, null);
   if (sourceQuestions.length === 0) {
     throw new Error("Source has no questions");
   }

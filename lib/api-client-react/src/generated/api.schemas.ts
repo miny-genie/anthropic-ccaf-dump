@@ -255,14 +255,60 @@ export interface NoteResult {
  */
 export type ErrorResponse = Error;
 
+export type LocaleParamParameter = typeof LocaleParamParameter[keyof typeof LocaleParamParameter];
+
+
+export const LocaleParamParameter = {
+  en: 'en',
+  ko: 'ko',
+} as const;
+
+export type StartAttemptParams = {
+locale?: LocaleParamParameter;
+};
+
+export type GetOrCreatePracticeAttemptParams = {
+locale?: LocaleParamParameter;
+};
+
+export type ResetPracticeAttemptParams = {
+locale?: LocaleParamParameter;
+};
+
+export type GetAttemptParams = {
+locale?: LocaleParamParameter;
+};
+
+export type SubmitAttemptParams = {
+locale?: LocaleParamParameter;
+};
+
+export type GetAttemptResultParams = {
+locale?: LocaleParamParameter;
+};
+
+export type ListBookmarksParams = {
+locale?: LocaleParamParameter;
+};
+
 export type ListWrongAnswersParams = {
 isRealTest?: boolean;
 scenario?: string;
 resolved?: boolean;
+locale?: LocaleParamParameter;
+};
+
+export type ListWrongAnswerScenariosParams = {
+locale?: LocaleParamParameter;
 };
 
 export type GetWrongAnswerReviewParams = {
 isRealTest?: boolean;
 scenario?: string;
+locale?: LocaleParamParameter;
+};
+
+export type UpdateWrongAnswerParams = {
+locale?: LocaleParamParameter;
 };
 

@@ -7,8 +7,6 @@
  */
 import type { LocaleParamParameter } from './localeParamParameter';
 
-export type GetWrongAnswerReviewParams = {
-isRealTest?: boolean;
-scenario?: string;
+export type ListBookmarksParams = {
 locale?: LocaleParamParameter;
 };

@@ -30,6 +30,7 @@ import {
   remainingSeconds,
   isExpired,
   computeScore,
+  computeScoreForLocale,
   persistScore,
   reorderOptions,
   createAttempt,
@@ -38,6 +39,7 @@ import {
   type AttemptRow,
   type ScoredResult,
 } from "../lib/attempts";
+import { normalizeLocale } from "../lib/locale";
 
 const router: IRouter = Router();
 
@@ -70,10 +72,10 @@ async function loadUserQuestionMeta(
   return { bookmarked, notes };
 }
 
-async function buildAttemptDetail(attempt: AttemptRow) {
+async function buildAttemptDetail(attempt: AttemptRow, locale?: string | null) {
   const order = await getAttemptQuestionOrder(attempt.id);
   const answers = await loadSavedAnswers(attempt.id);
-  const questionMap = await getQuestionsByIds(order);
+  const questionMap = await getQuestionsByIds(order, locale);
   const isReal = Boolean(attempt.is_real_test);
   const { bookmarked, notes } = await loadUserQuestionMeta(
     attempt.user_id,
@@ -189,6 +191,7 @@ router.get("/attempts", requireAuth, async (req, res) => {
 
 router.post("/attempts", requireAuth, async (req, res) => {
   const userId = (req as AuthedRequest).userId;
+  const locale = normalizeLocale(req.query.locale);
   const parsed = StartAttemptBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid request" });
@@ -209,7 +212,9 @@ router.post("/attempts", requireAuth, async (req, res) => {
   // Practice has a single persistent attempt managed only by /attempts/practice.
   // This generic endpoint may only start real-test attempts.
   if (!isReal) {
-    res.status(400).json({ error: "Use /attempts/practice for practice attempts" });
+    res
+      .status(400)
+      .json({ error: "Use /attempts/practice for practice attempts" });
     return;
   }
 
@@ -222,7 +227,7 @@ router.post("/attempts", requireAuth, async (req, res) => {
   }
 
   const attempt = await loadAttempt(attemptId, userId);
-  const detail = await buildAttemptDetail(attempt!);
+  const detail = await buildAttemptDetail(attempt!, locale);
   res.status(201).json(GetAttemptResponse.parse(detail));
 });
 
@@ -230,6 +235,7 @@ router.post("/attempts", requireAuth, async (req, res) => {
 // Return the user's active practice attempt, creating one only if none exists.
 router.post("/attempts/practice", requireAuth, async (req, res) => {
   const userId = (req as AuthedRequest).userId;
+  const locale = normalizeLocale(req.query.locale);
   const sourceId = await getPracticeSourceId();
   if (sourceId == null) {
     res.status(400).json({ error: "Practice source is not configured" });
@@ -248,7 +254,7 @@ router.post("/attempts/practice", requireAuth, async (req, res) => {
     attempt = await loadAttempt(attemptId, userId);
   }
 
-  const detail = await buildAttemptDetail(attempt!);
+  const detail = await buildAttemptDetail(attempt!, locale);
   res.json(GetAttemptResponse.parse(detail));
 });
 
@@ -256,6 +262,7 @@ router.post("/attempts/practice", requireAuth, async (req, res) => {
 // one (re-shuffled). Cross-attempt study data is preserved by design.
 router.post("/attempts/practice/reset", requireAuth, async (req, res) => {
   const userId = (req as AuthedRequest).userId;
+  const locale = normalizeLocale(req.query.locale);
   const sourceId = await getPracticeSourceId();
   if (sourceId == null) {
     res.status(400).json({ error: "Practice source is not configured" });
@@ -273,12 +280,13 @@ router.post("/attempts/practice/reset", requireAuth, async (req, res) => {
   }
 
   const attempt = await loadAttempt(attemptId, userId);
-  const detail = await buildAttemptDetail(attempt!);
+  const detail = await buildAttemptDetail(attempt!, locale);
   res.json(GetAttemptResponse.parse(detail));
 });
 
 router.get("/attempts/:id", requireAuth, async (req, res) => {
   const userId = (req as AuthedRequest).userId;
+  const locale = normalizeLocale(req.query.locale);
   const params = GetAttemptParams.safeParse(req.params);
   if (!params.success) {
     res.status(404).json({ error: "Not found" });
@@ -294,12 +302,12 @@ router.get("/attempts/:id", requireAuth, async (req, res) => {
     const scored = await computeScore(attempt);
     await persistScore(attempt, scored);
     const refreshed = await loadAttempt(attempt.id, userId);
-    const detail = await buildAttemptDetail(refreshed!);
+    const detail = await buildAttemptDetail(refreshed!, locale);
     res.json(GetAttemptResponse.parse(detail));
     return;
   }
 
-  const detail = await buildAttemptDetail(attempt);
+  const detail = await buildAttemptDetail(attempt, locale);
   res.json(GetAttemptResponse.parse(detail));
 });
 
@@ -443,6 +451,7 @@ router.patch("/attempts/:id/progress", requireAuth, async (req, res) => {
 
 router.post("/attempts/:id/submit", requireAuth, async (req, res) => {
   const userId = (req as AuthedRequest).userId;
+  const locale = normalizeLocale(req.query.locale);
   const params = SubmitAttemptParams.safeParse(req.params);
   if (!params.success) {
     res.status(404).json({ error: "Not found" });
@@ -458,7 +467,7 @@ router.post("/attempts/:id/submit", requireAuth, async (req, res) => {
     res.status(400).json({ error: "Practice attempts cannot be submitted" });
     return;
   }
-  const scored = await computeScore(attempt);
+  const scored = await computeScoreForLocale(attempt, locale);
   if (!attempt.submitted_at) {
     await persistScore(attempt, scored);
   }
@@ -469,6 +478,7 @@ router.post("/attempts/:id/submit", requireAuth, async (req, res) => {
 
 router.get("/attempts/:id/result", requireAuth, async (req, res) => {
   const userId = (req as AuthedRequest).userId;
+  const locale = normalizeLocale(req.query.locale);
   const params = GetAttemptResultParams.safeParse(req.params);
   if (!params.success) {
     res.status(404).json({ error: "Not found" });
@@ -486,8 +496,8 @@ router.get("/attempts/:id/result", requireAuth, async (req, res) => {
     res.status(400).json({ error: "Attempt has not been submitted yet" });
     return;
   }
-  const scored = await computeScore(attempt);
   const refreshed = await loadAttempt(attempt.id, userId);
+  const scored = await computeScoreForLocale(refreshed!, locale);
   const title = displaySourceTitle(Boolean(attempt.is_real_test));
   res.json(
     GetAttemptResultResponse.parse(buildResult(refreshed!, scored, title)),
