@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useQueryClient } from "@tanstack/react-query";
-import { useLocale } from "@/lib/locale";
+import { useLocale, useT } from "@/lib/locale";
 
 function NoteEditor({
   questionId,
@@ -31,6 +31,7 @@ function NoteEditor({
   const queryClient = useQueryClient();
   const noteMutation = useSetNote();
   const [draft, setDraft] = useState(initialNote ?? "");
+  const t = useT();
 
   useEffect(() => {
     setDraft(initialNote ?? "");
@@ -54,12 +55,12 @@ function NoteEditor({
   return (
     <div className="border-t border-border pt-4">
       <label className="text-sm font-semibold text-muted-foreground">
-        Your note
+        {t("common.yourNote")}
       </label>
       <Textarea
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
-        placeholder="Add a personal note for this question..."
+        placeholder={t("common.notePlaceholder")}
         className="mt-2 min-h-20 bg-secondary/30"
       />
       <div className="mt-2 flex justify-end gap-2">
@@ -73,7 +74,7 @@ function NoteEditor({
             }}
             disabled={noteMutation.isPending}
           >
-            Remove
+            {t("common.remove")}
           </Button>
         )}
         <Button
@@ -82,7 +83,7 @@ function NoteEditor({
           onClick={() => save(draft)}
           disabled={noteMutation.isPending || !dirty}
         >
-          Save note
+          {t("common.saveNote")}
         </Button>
       </div>
     </div>
@@ -93,6 +94,7 @@ export default function Notebook() {
   const [scenarioFilter, setScenarioFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [locale] = useLocale();
+  const t = useT();
 
   const queryClient = useQueryClient();
   const updateMutation = useUpdateWrongAnswer();
@@ -136,9 +138,11 @@ export default function Notebook() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="font-serif text-4xl text-foreground">Notebook</h1>
+          <h1 className="font-serif text-4xl text-foreground">
+            {t("notebook.title")}
+          </h1>
           <p className="text-lg text-muted-foreground mt-2 font-serif italic">
-            Questions you missed. Review and learn.
+            {t("notebook.subtitle")}
           </p>
         </div>
       </div>
@@ -146,21 +150,21 @@ export default function Notebook() {
       <div className="flex flex-wrap gap-4">
         <Select value={typeFilter} onValueChange={setTypeFilter}>
           <SelectTrigger className="w-[180px] bg-card">
-            <SelectValue placeholder="All Types" />
+            <SelectValue placeholder={t("notebook.allTypes")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="real">Real Tests</SelectItem>
-            <SelectItem value="mock">Practice Mode</SelectItem>
+            <SelectItem value="all">{t("notebook.allTypes")}</SelectItem>
+            <SelectItem value="real">{t("common.realTests")}</SelectItem>
+            <SelectItem value="mock">{t("common.practiceMode")}</SelectItem>
           </SelectContent>
         </Select>
 
         <Select value={scenarioFilter} onValueChange={setScenarioFilter}>
           <SelectTrigger className="w-[240px] bg-card">
-            <SelectValue placeholder="All Scenarios" />
+            <SelectValue placeholder={t("notebook.allScenarios")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Scenarios</SelectItem>
+            <SelectItem value="all">{t("notebook.allScenarios")}</SelectItem>
             {scenarios?.map((s) => (
               <SelectItem key={s} value={s}>
                 {s}
@@ -175,11 +179,10 @@ export default function Notebook() {
           <Card className="bg-card border-card-border shadow-sm p-12 text-center">
             <FileText className="w-12 h-12 text-muted mx-auto mb-4" />
             <h3 className="font-serif text-xl mb-2 text-foreground">
-              No questions found
+              {t("notebook.noQuestions")}
             </h3>
             <p className="text-muted-foreground">
-              Looks like you haven't gotten anything wrong that matches these
-              filters!
+              {t("notebook.noQuestionsDescription")}
             </p>
           </Card>
         ) : (
@@ -198,7 +201,7 @@ export default function Notebook() {
                     )}
                     {wa.isRealTest && (
                       <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full uppercase tracking-wider font-semibold">
-                        Real Test
+                        {t("common.realTest")}
                       </span>
                     )}
                   </div>
@@ -214,12 +217,13 @@ export default function Notebook() {
                   >
                     {wa.resolvedAt ? (
                       <>
-                        <CheckCircle className="w-4 h-4 mr-2" /> Resolved
+                        <CheckCircle className="w-4 h-4 mr-2" />{" "}
+                        {t("notebook.resolved")}
                       </>
                     ) : (
                       <>
-                        <CheckCircle className="w-4 h-4 mr-2 opacity-50" /> Mark
-                        Resolved
+                        <CheckCircle className="w-4 h-4 mr-2 opacity-50" />{" "}
+                        {t("notebook.markResolved")}
                       </>
                     )}
                   </Button>

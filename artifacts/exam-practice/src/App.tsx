@@ -3,7 +3,10 @@ import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useGetCurrentUser, getGetCurrentUserQueryKey } from "@workspace/api-client-react";
+import {
+  useGetCurrentUser,
+  getGetCurrentUserQueryKey,
+} from "@workspace/api-client-react";
 import NotFound from "@/pages/not-found";
 
 // Components
@@ -15,6 +18,7 @@ import History from "@/pages/history";
 import Notebook from "@/pages/notebook";
 import Exam from "@/pages/exam";
 import Result from "@/pages/result";
+import { useT } from "@/lib/locale";
 
 // This app drives its caches through optimistic setQueryData with no mutation
 // invalidation, so a window-focus background refetch would return pre-mutation
@@ -36,8 +40,15 @@ function ProtectedRoute({
   component: React.ComponentType;
   bare?: boolean;
 }) {
-  const { data: user, isLoading, error } = useGetCurrentUser({ query: { retry: false, queryKey: getGetCurrentUserQueryKey() } });
+  const {
+    data: user,
+    isLoading,
+    error,
+  } = useGetCurrentUser({
+    query: { retry: false, queryKey: getGetCurrentUserQueryKey() },
+  });
   const [, setLocation] = useLocation();
+  const t = useT();
 
   useEffect(() => {
     if (!isLoading && (error || !user)) {
@@ -46,7 +57,11 @@ function ProtectedRoute({
   }, [isLoading, error, user, setLocation]);
 
   if (isLoading) {
-    return <div className="min-h-screen bg-background flex items-center justify-center font-serif text-muted-foreground animate-pulse">Loading...</div>;
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center font-serif text-muted-foreground animate-pulse">
+        {t("app.loading")}
+      </div>
+    );
   }
 
   if (error || !user) {
@@ -68,13 +83,34 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
-      <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
-      <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
-      <Route path="/modes" component={() => <ProtectedRoute component={Modes} />} />
-      <Route path="/history" component={() => <ProtectedRoute component={History} />} />
-      <Route path="/notebook" component={() => <ProtectedRoute component={Notebook} />} />
-      <Route path="/exam/:id" component={() => <ProtectedRoute component={Exam} bare />} />
-      <Route path="/result/:id" component={() => <ProtectedRoute component={Result} />} />
+      <Route
+        path="/"
+        component={() => <ProtectedRoute component={Dashboard} />}
+      />
+      <Route
+        path="/dashboard"
+        component={() => <ProtectedRoute component={Dashboard} />}
+      />
+      <Route
+        path="/modes"
+        component={() => <ProtectedRoute component={Modes} />}
+      />
+      <Route
+        path="/history"
+        component={() => <ProtectedRoute component={History} />}
+      />
+      <Route
+        path="/notebook"
+        component={() => <ProtectedRoute component={Notebook} />}
+      />
+      <Route
+        path="/exam/:id"
+        component={() => <ProtectedRoute component={Exam} bare />}
+      />
+      <Route
+        path="/result/:id"
+        component={() => <ProtectedRoute component={Result} />}
+      />
       <Route component={NotFound} />
     </Switch>
   );

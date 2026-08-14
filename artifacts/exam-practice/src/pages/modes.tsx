@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
 import { BookOpen, Clock, FileText, ChevronRight } from "lucide-react";
-import { useLocale } from "@/lib/locale";
+import { useLocale, useT } from "@/lib/locale";
 
 export default function Modes() {
   const { data: sources, isLoading } = useListSources();
@@ -15,6 +15,7 @@ export default function Modes() {
   const practiceMutation = useGetOrCreatePracticeAttempt();
   const [, setLocation] = useLocation();
   const [locale] = useLocale();
+  const t = useT();
 
   if (isLoading) {
     return (
@@ -59,9 +60,11 @@ export default function Modes() {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
-        <h1 className="font-serif text-4xl text-foreground">Practice Modes</h1>
+        <h1 className="font-serif text-4xl text-foreground">
+          {t("modes.title")}
+        </h1>
         <p className="text-lg text-muted-foreground mt-2 font-serif italic">
-          Choose how you want to prepare today.
+          {t("modes.subtitle")}
         </p>
       </div>
 
@@ -71,18 +74,19 @@ export default function Modes() {
           <CardContent className="p-8 flex flex-col h-full">
             <BookOpen className="w-8 h-8 text-primary mb-4" />
             <h3 className="font-serif text-2xl mb-2 text-foreground">
-              Practice Mode
+              {t("common.practiceMode")}
             </h3>
             <p className="text-muted-foreground mb-6 flex-1">
-              Untimed, open-ended study with instant feedback on each question.
-              Your progress is always saved.
+              {t("modes.practiceDescription")}
             </p>
             <Button
               onClick={handleStartPractice}
               disabled={practiceMutation.isPending}
               className="w-full justify-between bg-background text-foreground hover:bg-background/90 border border-border"
             >
-              {practiceMutation.isPending ? "Opening..." : "Start Practice"}
+              {practiceMutation.isPending
+                ? t("common.opening")
+                : t("common.startPractice")}
               <ChevronRight className="w-4 h-4 ml-2" />
             </Button>
           </CardContent>
@@ -91,17 +95,18 @@ export default function Modes() {
         <Card className="bg-[#181715] text-[#faf9f5] border-none shadow-sm relative overflow-hidden group">
           <CardContent className="p-8 flex flex-col h-full">
             <Clock className="w-8 h-8 text-[#cc785c] mb-4" />
-            <h3 className="font-serif text-2xl mb-2">Real Test</h3>
+            <h3 className="font-serif text-2xl mb-2">{t("common.realTest")}</h3>
             <p className="text-gray-400 mb-6 flex-1">
-              Strict 60-question timed exam. 120 minutes. No immediate feedback.
-              Pass mark: 720/1000.
+              {t("modes.realTestDescription")}
             </p>
             <Button
               onClick={handleStartRealTest}
               disabled={startMutation.isPending || !realTestSource}
               className="w-full justify-between bg-[#cc785c] text-white hover:bg-[#a9583e] border-none"
             >
-              {startMutation.isPending ? "Starting..." : "Start Simulation"}
+              {startMutation.isPending
+                ? t("common.starting")
+                : t("common.startSimulation")}
               <ChevronRight className="w-4 h-4 ml-2" />
             </Button>
           </CardContent>
@@ -110,7 +115,7 @@ export default function Modes() {
 
       <div>
         <h2 className="font-serif text-2xl text-foreground mb-6 mt-12">
-          Review
+          {t("modes.review")}
         </h2>
         <Card className="bg-card border-card-border shadow-sm">
           <CardContent className="p-8 flex items-center justify-between">
@@ -118,15 +123,15 @@ export default function Modes() {
               <div className="flex items-center gap-3 mb-2">
                 <FileText className="w-6 h-6 text-warning" />
                 <h3 className="font-serif text-xl text-foreground">
-                  Wrong Answer Notebook
+                  {t("common.wrongAnswerNotebook")}
                 </h3>
               </div>
               <p className="text-muted-foreground">
-                Review and annotate questions you missed.
+                {t("modes.notebookDescription")}
               </p>
             </div>
             <Link href="/notebook">
-              <Button variant="outline">Open Notebook</Button>
+              <Button variant="outline">{t("common.openNotebook")}</Button>
             </Link>
           </CardContent>
         </Card>

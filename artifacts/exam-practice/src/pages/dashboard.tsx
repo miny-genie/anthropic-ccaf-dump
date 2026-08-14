@@ -14,13 +14,14 @@ import {
   FileText,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useLocale } from "@/lib/locale";
+import { useLocale, useT } from "@/lib/locale";
 
 export default function Dashboard() {
   const { data: dashboard, isLoading } = useGetDashboard();
   const practiceMutation = useGetOrCreatePracticeAttempt();
   const [, setLocation] = useLocation();
   const [locale] = useLocale();
+  const t = useT();
 
   const handleStartPractice = () => {
     practiceMutation.mutate(
@@ -53,10 +54,10 @@ export default function Dashboard() {
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
         <h1 className="font-serif text-4xl text-foreground">
-          Welcome back, {dashboard.user.username}.
+          {t("dashboard.welcome", { username: dashboard.user.username })}
         </h1>
         <p className="text-lg text-muted-foreground mt-2 font-serif italic">
-          Ready to continue your preparation?
+          {t("dashboard.subtitle")}
         </p>
       </div>
 
@@ -64,7 +65,7 @@ export default function Dashboard() {
         <Card className="bg-card border-card-border shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              Real Test Passes
+              {t("dashboard.realTestPasses")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -73,12 +74,16 @@ export default function Dashboard() {
                 {dashboard.realTestStat.passes}
               </span>
               <span className="text-sm text-muted-foreground">
-                / {dashboard.realTestStat.attempts} attempts
+                {t("dashboard.attempts", {
+                  count: dashboard.realTestStat.attempts,
+                })}
               </span>
             </div>
             {dashboard.realTestStat.bestScaled > 0 && (
               <p className="text-xs text-success mt-1">
-                Best score: {dashboard.realTestStat.bestScaled}
+                {t("dashboard.bestScore", {
+                  score: dashboard.realTestStat.bestScaled,
+                })}
               </p>
             )}
           </CardContent>
@@ -87,7 +92,7 @@ export default function Dashboard() {
         <Card className="bg-card border-card-border shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              Practice Progress
+              {t("dashboard.practiceProgress")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -96,8 +101,10 @@ export default function Dashboard() {
                 {dashboard.practiceProgress.percentComplete}%
               </span>
               <span className="text-sm text-muted-foreground">
-                {dashboard.practiceProgress.answered} of{" "}
-                {dashboard.practiceProgress.total} answered
+                {t("dashboard.answered", {
+                  answered: dashboard.practiceProgress.answered,
+                  total: dashboard.practiceProgress.total,
+                })}
               </span>
             </div>
           </CardContent>
@@ -106,7 +113,7 @@ export default function Dashboard() {
         <Card className="bg-card border-card-border shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              To Review
+              {t("dashboard.toReview")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -118,7 +125,9 @@ export default function Dashboard() {
                     {dashboard.wrongAnswerCount}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Wrong</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t("dashboard.wrong")}
+                </p>
               </div>
               <div>
                 <div className="flex items-baseline gap-1">
@@ -127,7 +136,9 @@ export default function Dashboard() {
                     {dashboard.bookmarkCount}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Bookmarks</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t("dashboard.bookmarks")}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -140,18 +151,19 @@ export default function Dashboard() {
           <CardContent className="p-8">
             <BookOpen className="w-8 h-8 text-primary mb-4" />
             <h3 className="font-serif text-2xl mb-2 text-foreground">
-              Practice Mode
+              {t("common.practiceMode")}
             </h3>
             <p className="text-muted-foreground mb-6">
-              Untimed, open-ended study with instant feedback. Picks up right
-              where you left off.
+              {t("dashboard.practiceDescription")}
             </p>
             <Button
               onClick={handleStartPractice}
               disabled={practiceMutation.isPending}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
-              {practiceMutation.isPending ? "Opening..." : "Start Practice"}
+              {practiceMutation.isPending
+                ? t("common.opening")
+                : t("common.startPractice")}
             </Button>
           </CardContent>
         </Card>
@@ -159,13 +171,13 @@ export default function Dashboard() {
         <Card className="bg-[#181715] text-[#faf9f5] border-none shadow-sm relative overflow-hidden">
           <CardContent className="p-8">
             <Clock className="w-8 h-8 text-[#cc785c] mb-4" />
-            <h3 className="font-serif text-2xl mb-2">Real Test</h3>
+            <h3 className="font-serif text-2xl mb-2">{t("common.realTest")}</h3>
             <p className="text-gray-400 mb-6">
-              Strict 60-question timed exam. 120 minutes. No immediate feedback.
+              {t("dashboard.realTestDescription")}
             </p>
             <Link href="/modes">
               <Button className="bg-[#cc785c] text-white hover:bg-[#a9583e] border-none">
-                Start Simulation
+                {t("common.startSimulation")}
               </Button>
             </Link>
           </CardContent>
@@ -175,7 +187,7 @@ export default function Dashboard() {
       {dashboard.recentAttempts.length > 0 && (
         <div>
           <h2 className="font-serif text-2xl text-foreground mb-6">
-            Recent Activity
+            {t("dashboard.recentActivity")}
           </h2>
           <div className="space-y-4">
             {dashboard.recentAttempts.slice(0, 3).map((attempt) => (
@@ -185,11 +197,13 @@ export default function Dashboard() {
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-medium text-foreground">
-                          {attempt.title}
+                          {attempt.isRealTest
+                            ? t("common.realTest")
+                            : t("common.practiceMode")}
                         </span>
                         {attempt.isRealTest && (
                           <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full uppercase tracking-wider font-semibold">
-                            Real Test
+                            {t("common.realTest")}
                           </span>
                         )}
                       </div>
@@ -209,13 +223,15 @@ export default function Dashboard() {
                             <div
                               className={`text-xs font-medium ${attempt.passed ? "text-success" : "text-destructive"}`}
                             >
-                              {attempt.passed ? "PASSED" : "FAILED"}
+                              {attempt.passed
+                                ? t("common.passed")
+                                : t("common.failed")}
                             </div>
                           )}
                         </>
                       ) : (
                         <div className="text-sm font-medium text-warning">
-                          IN PROGRESS
+                          {t("common.inProgress")}
                         </div>
                       )}
                     </div>

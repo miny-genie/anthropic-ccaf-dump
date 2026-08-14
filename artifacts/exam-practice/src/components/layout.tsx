@@ -14,11 +14,13 @@ import {
   FileText,
 } from "lucide-react";
 import { LocaleToggle } from "@/components/locale-toggle";
+import { useT } from "@/lib/locale";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const logoutMutation = useLogout();
   const queryClient = useQueryClient();
+  const t = useT();
   const { data: user } = useGetCurrentUser({
     query: { retry: false, queryKey: getGetCurrentUserQueryKey() },
   });
@@ -33,19 +35,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   };
 
   const navItems = [
-    { href: "/", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/modes", label: "Practice", icon: BookOpen },
-    { href: "/notebook", label: "Notebook", icon: FileText },
-    { href: "/history", label: "History", icon: History },
+    { href: "/", label: t("nav.dashboard"), icon: LayoutDashboard },
+    { href: "/modes", label: t("nav.practice"), icon: BookOpen },
+    { href: "/notebook", label: t("nav.notebook"), icon: FileText },
+    { href: "/history", label: t("nav.history"), icon: History },
   ];
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
       <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-border bg-card p-6 flex flex-col">
         <div className="mb-10">
-          <h1 className="font-serif text-2xl text-foreground">Exam Practice</h1>
+          <h1 className="font-serif text-2xl text-foreground">
+            {t("app.name")}
+          </h1>
           <p className="text-sm text-muted-foreground mt-1 tracking-tight">
-            Claude Certified Architect
+            {t("app.subtitle")}
           </p>
         </div>
 
@@ -85,7 +89,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             disabled={logoutMutation.isPending}
           >
             <LogOut className="w-5 h-5" />
-            Sign out
+            {t("nav.signOut")}
           </Button>
         </div>
       </aside>

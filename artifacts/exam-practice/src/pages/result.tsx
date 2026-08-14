@@ -7,12 +7,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, ChevronLeft, ArrowRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useLocale } from "@/lib/locale";
+import { useLocale, useT } from "@/lib/locale";
 
 export default function Result() {
   const { id } = useParams<{ id: string }>();
   const attemptId = parseInt(id || "0", 10);
   const [locale] = useLocale();
+  const t = useT();
 
   const { data: result, isLoading } = useGetAttemptResult(
     attemptId,
@@ -30,7 +31,7 @@ export default function Result() {
   if (isLoading || !result) {
     return (
       <div className="min-h-screen bg-background flex flex-col p-8 items-center justify-center font-serif text-muted-foreground animate-pulse">
-        Loading results...
+        {t("result.loading")}
       </div>
     );
   }
@@ -53,11 +54,11 @@ export default function Result() {
           <Link href="/">
             <Button variant="ghost" className="text-muted-foreground">
               <ChevronLeft className="w-4 h-4 mr-2" />
-              Back to Dashboard
+              {t("result.backToDashboard")}
             </Button>
           </Link>
           <h1 className="font-serif text-lg font-medium text-foreground">
-            Results
+            {t("result.title")}
           </h1>
         </div>
       </header>
@@ -73,9 +74,9 @@ export default function Result() {
             >
               {isRealTest
                 ? passed
-                  ? "Certification Passed"
-                  : "Did Not Pass"
-                : "Practice Completed"}
+                  ? t("result.certificationPassed")
+                  : t("result.didNotPass")
+                : t("result.practiceCompleted")}
             </h2>
 
             <div
@@ -87,7 +88,10 @@ export default function Result() {
             <p
               className={`text-lg opacity-80 font-medium ${isRealTest && passed ? "text-success-foreground" : isRealTest && passed === false ? "text-destructive-foreground" : "text-gray-300"}`}
             >
-              {correctCount} out of {totalCount} correct
+              {t("result.correctSummary", {
+                correct: correctCount,
+                total: totalCount,
+              })}
             </p>
           </CardContent>
         </Card>
@@ -96,7 +100,7 @@ export default function Result() {
         {scenarioBreakdown && scenarioBreakdown.length > 0 && (
           <div>
             <h3 className="font-serif text-2xl text-foreground mb-6">
-              Domain Breakdown
+              {t("result.domainBreakdown")}
             </h3>
             <div className="space-y-4">
               {scenarioBreakdown.map((s, i) => (
@@ -134,11 +138,11 @@ export default function Result() {
           <div>
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-serif text-2xl text-foreground">
-                Areas to Review
+                {t("result.areasToReview")}
               </h3>
               <Link href="/notebook">
                 <Button variant="outline">
-                  Go to Notebook
+                  {t("result.goToNotebook")}
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </Link>
@@ -165,7 +169,7 @@ export default function Result() {
                         <div className="flex items-start gap-2 text-sm text-destructive">
                           <XCircle className="w-4 h-4 mt-0.5 shrink-0" />
                           <span>
-                            You selected:{" "}
+                            {t("result.youSelected")}{" "}
                             <span className="font-semibold">
                               {wa.selectedOption}
                             </span>
@@ -175,7 +179,7 @@ export default function Result() {
                       <div className="flex items-start gap-2 text-sm text-success">
                         <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" />
                         <span>
-                          Correct answer:{" "}
+                          {t("result.correctAnswer")}{" "}
                           <span className="font-semibold">
                             {wa.correctOption}
                           </span>
@@ -188,7 +192,9 @@ export default function Result() {
               {wrongAnswers.length > 5 && (
                 <div className="text-center pt-4">
                   <p className="text-muted-foreground mb-4">
-                    +{wrongAnswers.length - 5} more wrong answers
+                    {t("result.moreWrongAnswers", {
+                      count: wrongAnswers.length - 5,
+                    })}
                   </p>
                 </div>
               )}

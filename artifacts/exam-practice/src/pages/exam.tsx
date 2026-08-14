@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { LocaleToggle } from "@/components/locale-toggle";
-import { useLocale } from "@/lib/locale";
+import { useLocale, useT } from "@/lib/locale";
 
 export default function Exam() {
   const { id } = useParams<{ id: string }>();
@@ -45,6 +45,7 @@ export default function Exam() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [locale] = useLocale();
+  const t = useT();
   const attemptParams = { locale };
   const attemptKey = getGetAttemptQueryKey(attemptId, attemptParams);
 
@@ -142,7 +143,7 @@ export default function Exam() {
   if (isLoading || !attempt) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center font-serif text-muted-foreground animate-pulse">
-        Loading exam...
+        {t("exam.loading")}
       </div>
     );
   }
@@ -302,7 +303,7 @@ export default function Exam() {
       <header className="bg-card border-b border-border sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <h1 className="font-serif text-lg md:text-xl font-medium text-foreground truncate">
-            {attempt.title}
+            {isReal ? t("common.realTest") : t("common.practiceMode")}
           </h1>
           <div className="flex items-center gap-4">
             {timeLeft !== null && (
@@ -325,7 +326,7 @@ export default function Exam() {
                 onClick={handleSubmit}
                 disabled={submitMutation.isPending}
               >
-                Submit Exam
+                {t("exam.submit")}
               </Button>
             ) : (
               <div className="flex items-center gap-2">
@@ -335,7 +336,7 @@ export default function Exam() {
                   onClick={() => setLocation("/modes")}
                 >
                   <LogOut className="w-4 h-4 mr-2" />
-                  Exit
+                  {t("exam.exit")}
                 </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
@@ -344,22 +345,20 @@ export default function Exam() {
                       disabled={resetMutation.isPending}
                     >
                       <RotateCcw className="w-4 h-4 mr-2" />
-                      Reset Practice
+                      {t("exam.resetPractice")}
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Start over?</AlertDialogTitle>
+                      <AlertDialogTitle>{t("exam.startOver")}</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This clears all your practice answers, feedback, and
-                        saved position, then reshuffles the questions for a
-                        fresh run. Your bookmarks and personal notes are kept.
+                        {t("exam.resetDescription")}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogCancel>{t("exam.cancel")}</AlertDialogCancel>
                       <AlertDialogAction onClick={handleResetPractice}>
-                        Reset Practice
+                        {t("exam.resetPractice")}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
@@ -374,7 +373,10 @@ export default function Exam() {
         <div className="flex-1 space-y-8 min-w-0">
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold tracking-widest text-muted-foreground uppercase">
-              Question {currentQuestion.questionNo} of {questions.length}
+              {t("exam.questionOf", {
+                current: currentQuestion.questionNo,
+                total: questions.length,
+              })}
             </h2>
             <div className="flex items-center gap-1">
               <Button
@@ -392,7 +394,9 @@ export default function Exam() {
                     currentQuestion.bookmarked ? "fill-current" : ""
                   }`}
                 />
-                {currentQuestion.bookmarked ? "Bookmarked" : "Bookmark"}
+                {currentQuestion.bookmarked
+                  ? t("exam.bookmarked")
+                  : t("exam.bookmark")}
               </Button>
               <Button
                 variant="ghost"
@@ -409,7 +413,9 @@ export default function Exam() {
                     currentQuestion.flagged ? "fill-current" : ""
                   }`}
                 />
-                {currentQuestion.flagged ? "Flagged" : "Flag for review"}
+                {currentQuestion.flagged
+                  ? t("exam.flagged")
+                  : t("exam.flagForReview")}
               </Button>
             </div>
           </div>
@@ -425,7 +431,7 @@ export default function Exam() {
             </div>
             {isReal && currentQuestion.scenario && (
               <div className="mt-3 text-right text-xs text-muted-foreground not-prose font-sans italic">
-                Scenario : {currentQuestion.scenario}
+                {t("exam.scenario", { scenario: currentQuestion.scenario })}
               </div>
             )}
           </div>
@@ -493,12 +499,12 @@ export default function Exam() {
           {!isReal && (
             <div className="pt-2">
               <label className="text-sm font-semibold text-muted-foreground">
-                Your note
+                {t("common.yourNote")}
               </label>
               <Textarea
                 value={noteDraft}
                 onChange={(e) => setNoteDraft(e.target.value)}
-                placeholder="Add a personal note for this question..."
+                placeholder={t("common.notePlaceholder")}
                 className="mt-2 min-h-24 bg-card"
               />
               <div className="mt-2 flex justify-end gap-2">
@@ -512,7 +518,7 @@ export default function Exam() {
                     }}
                     disabled={noteMutation.isPending}
                   >
-                    Remove
+                    {t("common.remove")}
                   </Button>
                 )}
                 <Button
@@ -521,7 +527,7 @@ export default function Exam() {
                   onClick={() => saveNote(noteDraft)}
                   disabled={noteMutation.isPending || !noteDirty}
                 >
-                  Save note
+                  {t("common.saveNote")}
                 </Button>
               </div>
             </div>
@@ -535,7 +541,7 @@ export default function Exam() {
               disabled={currentIndex === 0}
             >
               <ChevronLeft className="w-4 h-4 mr-2" />
-              Previous
+              {t("exam.previous")}
             </Button>
             <Button
               variant="outline"
@@ -543,7 +549,7 @@ export default function Exam() {
               onClick={() => goTo(currentIndex + 1)}
               disabled={currentIndex === questions.length - 1}
             >
-              Next
+              {t("exam.next")}
               <ChevronRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
@@ -553,7 +559,7 @@ export default function Exam() {
           <Card className="bg-card border-card-border shadow-sm sticky top-24">
             <CardContent className="p-4">
               <h3 className="font-serif text-lg mb-4 text-foreground">
-                Questions
+                {t("exam.questions")}
               </h3>
               <div className="grid grid-cols-5 gap-2">
                 {questions.map((q, idx) => {
